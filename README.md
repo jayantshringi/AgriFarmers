@@ -10,8 +10,7 @@
 > **A multi‑lingual web platform connecting Indian farmers with weather insights, seed recommendations, market prices, and more – designed for Smart India Hackathon 2025.**
 
 <p align="center">
-  <!-- Add a screenshot or GIF of your app here -->
-  <img src="./screenshpts/desktop.png" alt="AgriFarmers Platform Screenshot" width="600"/>
+  <img src="./screenshots/desktop.png" alt="AgriFarmers Platform - Desktop View" width="600"/>
 </p>
 
 ---
