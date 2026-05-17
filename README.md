@@ -11,7 +11,7 @@
 
 <p align="center">
   <!-- Add a screenshot or GIF of your app here -->
-  <img src="./assets/demo-screenshot.png" alt="AgriFarmers Platform Screenshot" width="600"/>
+  <img src="./screenshpts/desktop.png" alt="AgriFarmers Platform Screenshot" width="600"/>
 </p>
 
 ---
