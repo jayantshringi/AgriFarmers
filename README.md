@@ -36,7 +36,8 @@ The platform follows a **mobile‑first, responsive** design using **HTML5, CSS3
 - 🌦️ **Weather Forecasting** – Displays region‑specific weather data (currently mock, ready for real API integration).
 - 🌱 **Smart Recommendations** – Crop calendar, seed/fertilizer advice, soil health insights based on user’s state and district.
 - 📊 **Market Price Insights** – Simulated local mandi prices, easily switchable to live data.
-- 💾 **Local Storage** – Saves user preferences and selections without a backend.
+- 🔐 **SMS OTP Login** – Sends and verifies mobile OTPs through a server-side TextBee integration.
+- 💾 **Local Storage** – Saves user preferences and selections with Firestore/local fallback.
 - ✅ **Form Validation & Error Handling** – Client‑side validation with user feedback and secure input handling.
 
 ---
@@ -46,10 +47,39 @@ The platform follows a **mobile‑first, responsive** design using **HTML5, CSS3
 | Area              | Technologies                                  |
 |-------------------|-----------------------------------------------|
 | **Frontend**      | HTML5, CSS3, JavaScript (ES6+), Tailwind CSS  |
-| **State Management** | Local Storage API                          |
+| **OTP API**       | Node.js HTTP server, TextBee SMS API          |
+| **Data**          | Firebase Firestore with Local Storage fallback |
 | **Icons & Assets** | Custom CSS + Emoji (optionally integrate Font Awesome) |
-| **Hosting**       | GitHub Pages                                  |
-| **Tools**         | VS Code, Git,                                 |
+| **Hosting**       | GitHub Pages for static UI; Node host required for OTP API |
+| **Tools**         | VS Code, Git                                  |
+
+---
+
+## 🔐 TextBee OTP Setup
+
+The TextBee API key must stay server-side. This repo includes `server.js`, which serves the static app and exposes:
+
+- `POST /api/otp/send` – Generates a 6-digit OTP and sends it through TextBee.
+- `POST /api/otp/verify` – Verifies the OTP before completing login/signup.
+
+### Local run
+
+1. Copy `.env.example` to `.env`.
+2. Fill `TEXTBEE_API_KEY`, `TEXTBEE_DEVICE_ID`, and a strong `OTP_SECRET`.
+3. Run `npm start`.
+4. Open `http://localhost:3000`.
+
+### Static hosting with a separate API
+
+If the frontend remains on GitHub Pages and the OTP API is deployed elsewhere, set the API origin in `js/app-config.js`:
+
+```js
+window.AGRIFARMERS_CONFIG = {
+  otpApiBaseUrl: 'https://your-otp-api.example.com'
+};
+```
+
+Set `CORS_ORIGIN` on the API server to the GitHub Pages origin.
 
 ---
 

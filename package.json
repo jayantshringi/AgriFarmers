@@ -1,0 +1,13 @@
+{
+  "name": "agrifarmers-sih-2025",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AgriFarmers SIH 2025 prototype with TextBee OTP support",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
