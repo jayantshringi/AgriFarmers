@@ -40,16 +40,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/app-config.js"></script>
 
-    <!-- TextBee OTP + Firebase profile module (loaded as ES module) -->
+    <!-- TextBee OTP + LocalStorage profile module (loaded as ES module) -->
     <script type="module">
-        import { initAuthListener, sendOTPWithTextBee, verifyOTPWithTextBee, setPendingSignupData, firebaseSignOut } from './js/auth.js';
+        import { initAuthListener, sendOTPWithTextBee, verifyOTPWithTextBee, setPendingSignupData, signOutUser } from './js/auth.js';
 
         window._sendOTP = sendOTPWithTextBee;
         window._verifyOTP = verifyOTPWithTextBee;
         window._setPendingSignup = setPendingSignupData;
-        window._firebaseSignOut = firebaseSignOut;
-        window._firebaseSendOTP = sendOTPWithTextBee;
-        window._firebaseVerifyOTP = verifyOTPWithTextBee;
+        window._signOut = signOutUser;
 
         document.addEventListener('DOMContentLoaded', () => initAuthListener());
     </script>

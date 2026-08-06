@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v5.2
-const CACHE_NAME = 'agrifarmers-v5.2';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v5.2';
+// AgriFarmers Service Worker v5.3
+const CACHE_NAME = 'agrifarmers-v5.3';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v5.3';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -12,7 +12,6 @@ const STATIC_ASSETS = [
   './js/app-config.js',
   './js/auth.js',
   './js/database.js',
-  './js/firebase-config.js',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
@@ -21,7 +20,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v5.2...');
+  console.log('[Service Worker] Installing v5.3...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
@@ -38,7 +37,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v5.2...');
+  console.log('[Service Worker] Activating v5.3...');
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {

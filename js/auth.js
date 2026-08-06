@@ -1,13 +1,18 @@
-import { auth } from './firebase-config.js';
-import { saveUserToFirestore, getUserFromFirestore, updateLastLogin } from './database.js';
-import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+    saveUserProfile,
+    getUserProfile,
+    updateLastLogin,
+    setCurrentSession,
+    getCurrentSession,
+    clearCurrentSession
+} from './database.js';
 
 let activePhoneNumber = null;
 let pendingSignupData = null;
 
 function getMobileNumber(phoneStr) {
     if (!phoneStr) return '';
-    return phoneStr.replace(/\D/g, '').slice(-10);
+    return String(phoneStr).replace(/\D/g, '').slice(-10);
 }
 
 function toE164PhoneNumber(phoneStr) {
@@ -29,6 +34,14 @@ function toE164PhoneNumber(phoneStr) {
     }
 
     return '';
+}
+
+function maskPhoneNumber(phoneNumber) {
+    const normalized = toE164PhoneNumber(phoneNumber);
+    const mobile = getMobileNumber(normalized);
+
+    if (!mobile) return 'your mobile number';
+    return `+91 ******${mobile.slice(-4)}`;
 }
 
 function getOtpApiBaseUrl() {
@@ -64,7 +77,6 @@ function flashOtpInputs() {
 
 export async function sendOTPWithTextBee(phoneNumber) {
     activePhoneNumber = toE164PhoneNumber(phoneNumber);
-    const cleanMobile = getMobileNumber(activePhoneNumber);
 
     if (!activePhoneNumber || !/^\+[1-9]\d{9,14}$/.test(activePhoneNumber)) {
         if (window.showToast) window.showToast('Please enter a valid mobile number.', 'error');
@@ -73,7 +85,7 @@ export async function sendOTPWithTextBee(phoneNumber) {
 
     try {
         await postOtpRequest('send', { phoneNumber: activePhoneNumber });
-        if (window.showToast) window.showToast(`OTP sent to +91 ${cleanMobile}.`, 'success');
+        if (window.showToast) window.showToast(`OTP sent to ${maskPhoneNumber(activePhoneNumber)}.`, 'success');
         return true;
     } catch (error) {
         console.error('TextBee OTP send error:', error);
@@ -109,28 +121,27 @@ export async function verifyOTPWithTextBee(otpCode) {
     }
 
     try {
-        const existingUser = await getUserFromFirestore(cleanMobile);
+        const existingUser = getUserProfile(cleanMobile);
 
         if (pendingSignupData) {
-            const newProfile = {
-                uid: 'user_' + cleanMobile,
+            const newProfile = saveUserProfile(cleanMobile, {
+                uid: `user_${cleanMobile}`,
                 ...pendingSignupData,
                 mobile: cleanMobile
-            };
-            await saveUserToFirestore('user_' + cleanMobile, newProfile);
+            });
             window.currentUser = newProfile;
-            localStorage.setItem('agrifarmers_user', JSON.stringify(newProfile));
+            setCurrentSession(newProfile);
             pendingSignupData = null;
 
             if (window.showToast) window.showToast(`Account created successfully! Welcome, ${newProfile.name}!`, 'success');
         } else if (existingUser) {
-            window.currentUser = existingUser;
-            localStorage.setItem('agrifarmers_user', JSON.stringify(existingUser));
-            await updateLastLogin(existingUser.uid || cleanMobile);
+            const updatedUser = updateLastLogin(cleanMobile) || existingUser;
+            window.currentUser = updatedUser;
+            setCurrentSession(updatedUser);
 
-            if (window.showToast) window.showToast(`Welcome back, ${existingUser.name}!`, 'success');
+            if (window.showToast) window.showToast(`Welcome back, ${updatedUser.name}!`, 'success');
         } else {
-            if (window.showToast) window.showToast(`No account found for +91 ${cleanMobile}. Please sign up.`, 'error');
+            if (window.showToast) window.showToast(`No account found for ${maskPhoneNumber(phoneNumber)}. Please sign up.`, 'error');
             if (window.showPage) window.showPage('signUpPage');
             return false;
         }
@@ -150,40 +161,16 @@ export function setPendingSignupData(data) {
     pendingSignupData = data;
 }
 
-export async function firebaseSignOut() {
-    try {
-        if (auth) await signOut(auth);
-    } catch (_) {}
+export function signOutUser() {
     window.currentUser = null;
-    localStorage.removeItem('agrifarmers_user');
-    console.log('👋 Signed out');
+    clearCurrentSession();
 }
 
 export function initAuthListener() {
-    const savedUserStr = localStorage.getItem('agrifarmers_user');
-    if (savedUserStr) {
-        try {
-            const savedUser = JSON.parse(savedUserStr);
-            window.currentUser = savedUser;
-            if (window.updateUserInfo) window.updateUserInfo();
-            if (window.showPage) window.showPage('homePage');
-        } catch (_) {}
-    }
+    const savedUser = getCurrentSession();
+    if (!savedUser) return;
 
-    if (auth) {
-        onAuthStateChanged(auth, async (firebaseUser) => {
-            if (firebaseUser) {
-                const userData = await getUserFromFirestore(firebaseUser.uid || firebaseUser.phoneNumber);
-                if (userData) {
-                    window.currentUser = userData;
-                    localStorage.setItem('agrifarmers_user', JSON.stringify(userData));
-                    if (window.updateUserInfo) window.updateUserInfo();
-                    if (window.showPage) window.showPage('homePage');
-                }
-            }
-        });
-    }
+    window.currentUser = savedUser;
+    if (window.updateUserInfo) window.updateUserInfo();
+    if (window.showPage) window.showPage('homePage');
 }
-
-export const sendOTPWithFirebase = sendOTPWithTextBee;
-export const verifyOTPWithFirebase = verifyOTPWithTextBee;

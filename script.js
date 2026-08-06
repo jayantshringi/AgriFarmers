@@ -507,7 +507,7 @@ function initApp() {
     // Set current date
     updateDate();
 
-    // NOTE: Session restore is now handled by initAuthListener() in auth.js
+    // Session restore is handled by initAuthListener() in auth.js
     // which runs automatically via the <script type="module"> block in <head>.
     // We still keep a fast localStorage check so the UI doesn't flash welcome page:
     const savedUser = localStorage.getItem('agrifarmers_user');
@@ -768,6 +768,21 @@ function initOTPInputs() {
     if (firstInput) firstInput.focus();
 }
 
+function maskPhoneNumber(phoneNumber) {
+    const digits = String(phoneNumber || '').replace(/\D/g, '');
+    const mobile = digits.slice(-10);
+
+    if (mobile.length !== 10) return 'your mobile number';
+    return `+91 ******${mobile.slice(-4)}`;
+}
+
+function setOtpPhoneNumber(phoneNumber) {
+    const otpNumber = document.getElementById('otpPhoneNumber');
+    if (!otpNumber) return;
+
+    otpNumber.textContent = maskPhoneNumber(phoneNumber);
+    otpNumber.dataset.phoneNumber = phoneNumber;
+}
 // ── Handle Login (sends TextBee OTP) ──────────────────
 async function handleLogin() {
     const mobile = document.getElementById('loginMobile')?.value.trim();
@@ -783,8 +798,7 @@ async function handleLogin() {
     if (btn) { btn.disabled = true; btn.textContent = 'Sending OTP...'; }
 
     const phoneNumber = `+91${mobile}`;
-    const otpNumber   = document.getElementById('otpPhoneNumber');
-    if (otpNumber) otpNumber.textContent = `+91 ${mobile}`;
+    setOtpPhoneNumber(phoneNumber);
 
     const sent = await window._sendOTP(phoneNumber);
 
@@ -824,12 +838,11 @@ async function handleSignUp() {
     const btn = document.querySelector('#signUpPage button[onclick="handleSignUp()"]');
     if (btn) { btn.disabled = true; btn.textContent = 'Sending OTP...'; }
 
-    // Store signup data so auth.js can save it to Firestore after OTP is verified
+    // Store signup data so auth.js can save it locally after OTP is verified
     window._setPendingSignup({ name, mobile, state, district, location: null });
 
     const phoneNumber = `+91${mobile}`;
-    const otpNumber   = document.getElementById('otpPhoneNumber');
-    if (otpNumber) otpNumber.textContent = `+91 ${mobile}`;
+    setOtpPhoneNumber(phoneNumber);
 
     const sent = await window._sendOTP(phoneNumber);
 
@@ -900,10 +913,9 @@ async function verifyOTP() {
 
 // ── Resend OTP ───────────────────────────────────────────────
 async function resendOTP() {
-    // Re-read the phone number shown on the OTP page
-    const phoneText = document.getElementById('otpPhoneNumber')?.textContent || '';
-    // phoneText is like "+91 9876543210" → strip space
-    const phoneNumber = phoneText.replace(/\s/g, '');
+    const otpNumber = document.getElementById('otpPhoneNumber');
+    const phoneNumber = otpNumber?.dataset.phoneNumber || '';
+    const phoneText = otpNumber?.textContent || maskPhoneNumber(phoneNumber);
 
     if (!phoneNumber || phoneNumber.length < 10) {
         showToast('Phone number not found. Please go back and try again.', 'error');
@@ -1333,9 +1345,9 @@ function closeModal(modalId) {
 function handleLogout() {
     const confirmLogout = confirm('Are you sure you want to logout?');
     if (confirmLogout) {
+        if (window._signOut) window._signOut();
         currentUser = null;
         userLocation = null;
-        localStorage.removeItem('agrifarmers_user');
         showPage('welcomePage');
         showToast('Logged out successfully', 'success');
         

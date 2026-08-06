@@ -37,7 +37,7 @@ The platform follows a **mobile‑first, responsive** design using **HTML5, CSS3
 - 🌱 **Smart Recommendations** – Crop calendar, seed/fertilizer advice, soil health insights based on user’s state and district.
 - 📊 **Market Price Insights** – Simulated local mandi prices, easily switchable to live data.
 - 🔐 **SMS OTP Login** – Sends and verifies mobile OTPs through a server-side TextBee integration.
-- 💾 **Local Storage** – Saves user preferences and selections with Firestore/local fallback.
+- 💾 **Local Storage** – Saves user profile and preferences in browser LocalStorage.
 - ✅ **Form Validation & Error Handling** – Client‑side validation with user feedback and secure input handling.
 
 ---
@@ -48,7 +48,7 @@ The platform follows a **mobile‑first, responsive** design using **HTML5, CSS3
 |-------------------|-----------------------------------------------|
 | **Frontend**      | HTML5, CSS3, JavaScript (ES6+), Tailwind CSS  |
 | **OTP API**       | Node.js HTTP server, TextBee SMS API          |
-| **Data**          | Firebase Firestore with Local Storage fallback |
+| **Data**          | Browser LocalStorage for prototype profile data |
 | **Icons & Assets** | Custom CSS + Emoji (optionally integrate Font Awesome) |
 | **Hosting**       | GitHub Pages for static UI; Node host required for OTP API |
 | **Tools**         | VS Code, Git                                  |
