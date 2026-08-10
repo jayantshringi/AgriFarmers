@@ -1,7 +1,4 @@
 import {
-    saveUserProfile,
-    getUserProfile,
-    updateLastLogin,
     setCurrentSession,
     getCurrentSession,
     clearCurrentSession
@@ -68,12 +65,58 @@ async function postOtpRequest(endpoint, payload) {
     return result;
 }
 
+// ─── User API helpers ─────────────────────────────────────────────────────────
+
+async function apiGetUser(mobile) {
+    const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}`);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error('Failed to fetch user profile.');
+    const data = await response.json();
+    return data.user || null;
+}
+
+async function apiCreateUser(profile) {
+    const response = await fetch(`${getOtpApiBaseUrl()}/api/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile)
+    });
+
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to create user profile.');
+    }
+
+    return data.user;
+}
+
+async function apiUpdateLogin(mobile) {
+    const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}/login`, {
+        method: 'PUT'
+    });
+
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+
+    if (!response.ok) {
+        throw new Error(data.message || 'Failed to update login timestamp.');
+    }
+
+    return data.user;
+}
+
+// ─── OTP flash helper ─────────────────────────────────────────────────────────
+
 function flashOtpInputs() {
     document.querySelectorAll('.otp-digit').forEach(input => {
         input.classList.add('border-red-500', 'bg-red-50');
         setTimeout(() => input.classList.remove('border-red-500', 'bg-red-50'), 1000);
     });
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function sendOTPWithTextBee(phoneNumber) {
     activePhoneNumber = toE164PhoneNumber(phoneNumber);
@@ -111,6 +154,7 @@ export async function verifyOTPWithTextBee(otpCode) {
         return false;
     }
 
+    // Verify the OTP with the server
     try {
         await postOtpRequest('verify', { phoneNumber, otp: entered });
     } catch (error) {
@@ -120,39 +164,52 @@ export async function verifyOTPWithTextBee(otpCode) {
         return false;
     }
 
+    // OTP verified — now handle signup vs login
     try {
-        const existingUser = getUserProfile(cleanMobile);
+        let profile = null;
 
         if (pendingSignupData) {
-            const newProfile = saveUserProfile(cleanMobile, {
-                uid: `user_${cleanMobile}`,
-                ...pendingSignupData,
-                mobile: cleanMobile
+            // Signup: create user in database
+            profile = await apiCreateUser({
+                uid:      `user_${cleanMobile}`,
+                mobile:   cleanMobile,
+                name:     pendingSignupData.name,
+                state:    pendingSignupData.state    || null,
+                district: pendingSignupData.district || null,
+                location: pendingSignupData.location || null
             });
-            window.currentUser = newProfile;
-            setCurrentSession(newProfile);
             pendingSignupData = null;
 
-            if (window.showToast) window.showToast(`Account created successfully! Welcome, ${newProfile.name}!`, 'success');
-        } else if (existingUser) {
-            const updatedUser = updateLastLogin(cleanMobile) || existingUser;
-            window.currentUser = updatedUser;
-            setCurrentSession(updatedUser);
-
-            if (window.showToast) window.showToast(`Welcome back, ${updatedUser.name}!`, 'success');
+            if (window.showToast) window.showToast(`Account created successfully! Welcome, ${profile.name}!`, 'success');
         } else {
-            if (window.showToast) window.showToast(`No account found for ${maskPhoneNumber(phoneNumber)}. Please sign up.`, 'error');
-            if (window.showPage) window.showPage('signUpPage');
-            return false;
+            // Login: fetch user from database
+            profile = await apiGetUser(cleanMobile);
+
+            if (!profile) {
+                if (window.showToast) window.showToast(`No account found for ${maskPhoneNumber(phoneNumber)}. Please sign up.`, 'error');
+                if (window.showPage) window.showPage('signUpPage');
+                return false;
+            }
+
+            // Update last_login in DB (best-effort, don't block on failure)
+            apiUpdateLogin(cleanMobile)
+                .then(updated => { if (updated) profile = updated; })
+                .catch(err => console.warn('Failed to update last_login:', err.message));
+
+            if (window.showToast) window.showToast(`Welcome back, ${profile.name}!`, 'success');
         }
+
+        window.currentUser = profile;
+        setCurrentSession(profile);
 
         if (window.updateUserInfo) window.updateUserInfo();
         if (window.getUserLocation) window.getUserLocation();
         if (window.showPage) window.showPage('homePage');
         return true;
+
     } catch (error) {
         console.error('OTP verification profile error:', error);
-        if (window.showToast) window.showToast('Authentication error. Please try again.', 'error');
+        if (window.showToast) window.showToast(error.message || 'Authentication error. Please try again.', 'error');
         return false;
     }
 }

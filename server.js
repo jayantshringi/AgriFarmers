@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const mysql = require('mysql2/promise');
 
 loadDotEnv(path.join(__dirname, '.env'));
 
@@ -33,6 +34,8 @@ const mimeTypes = {
     '.webmanifest': 'application/manifest+json; charset=utf-8'
 };
 
+// ─── .env loader ─────────────────────────────────────────────────────────────
+
 function loadDotEnv(envPath) {
     if (!fs.existsSync(envPath)) return;
 
@@ -56,6 +59,56 @@ function loadDotEnv(envPath) {
         }
     });
 }
+
+// ─── MySQL Database ───────────────────────────────────────────────────────────
+
+let db = null;
+
+async function createDbPool() {
+    // Support both individual vars and a DATABASE_URL (for Railway/Render)
+    if (process.env.DATABASE_URL) {
+        return mysql.createPool(process.env.DATABASE_URL + '?waitForConnections=true&connectionLimit=5');
+    }
+
+    return mysql.createPool({
+        host:            process.env.DB_HOST     || 'localhost',
+        port:            Number(process.env.DB_PORT || 3306),
+        user:            process.env.DB_USER     || 'root',
+        password:        process.env.DB_PASSWORD || '',
+        database:        process.env.DB_NAME     || 'agrifarmers_db',
+        waitForConnections: true,
+        connectionLimit: 5
+    });
+}
+
+async function initDb() {
+    try {
+        db = await createDbPool();
+
+        await db.execute(`
+            CREATE TABLE IF NOT EXISTS users (
+                id         INT AUTO_INCREMENT PRIMARY KEY,
+                mobile     VARCHAR(10)  NOT NULL UNIQUE,
+                uid        VARCHAR(50)  NOT NULL UNIQUE,
+                name       VARCHAR(100) NOT NULL,
+                state      VARCHAR(100),
+                district   VARCHAR(100),
+                location   JSON,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                last_login DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        console.log('Database connected and users table ready.');
+    } catch (err) {
+        console.error('Database connection failed:', err.message);
+        console.warn('Running WITHOUT database. User profiles will not be persisted.');
+        db = null;
+    }
+}
+
+// ─── HTTP helpers ─────────────────────────────────────────────────────────────
 
 function sendJson(req, res, statusCode, payload) {
     setCorsHeaders(req, res);
@@ -88,7 +141,7 @@ function setCorsHeaders(req, res) {
         res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     }
     res.setHeader('Vary', 'Origin');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
@@ -110,6 +163,8 @@ async function readJsonBody(req) {
         throw createHttpError(400, 'Invalid JSON request body.');
     }
 }
+
+// ─── Phone helpers ────────────────────────────────────────────────────────────
 
 function normalizePhoneNumber(phoneNumber) {
     if (!phoneNumber) return '';
@@ -147,6 +202,13 @@ function validateOtp(otp) {
     }
     return normalized;
 }
+
+/** Returns the 10-digit mobile from an E.164 number like +919876543210 */
+function getMobile10(e164) {
+    return e164.replace(/\D/g, '').slice(-10);
+}
+
+// ─── OTP helpers ──────────────────────────────────────────────────────────────
 
 function hashOtp(phoneNumber, otp, salt) {
     return crypto
@@ -243,6 +305,8 @@ async function sendTextBeeSms(phoneNumber, otp) {
     }
 }
 
+// ─── OTP route handlers ───────────────────────────────────────────────────────
+
 async function handleSendOtp(req, res) {
     const body = await readJsonBody(req);
     const phoneNumber = validatePhoneNumber(body.phoneNumber);
@@ -302,6 +366,103 @@ async function handleVerifyOtp(req, res) {
     sendJson(req, res, 200, { verified: true });
 }
 
+// ─── User route handlers ──────────────────────────────────────────────────────
+
+function assertDbAvailable() {
+    if (!db) {
+        throw createHttpError(503, 'Database is unavailable. Please try again later.');
+    }
+}
+
+/** POST /api/users — create a new user */
+async function handleCreateUser(req, res) {
+    assertDbAvailable();
+
+    const body = await readJsonBody(req);
+    const { mobile, uid, name, state, district, location } = body;
+
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+        throw createHttpError(400, 'Invalid mobile number.');
+    }
+    if (!name || name.trim().length < 2) {
+        throw createHttpError(400, 'Name must be at least 2 characters.');
+    }
+
+    const safeUid = uid || `user_${mobile}`;
+
+    const [result] = await db.execute(
+        `INSERT INTO users (mobile, uid, name, state, district, location)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           name     = VALUES(name),
+           state    = VALUES(state),
+           district = VALUES(district),
+           location = VALUES(location),
+           updated_at = CURRENT_TIMESTAMP`,
+        [mobile, safeUid, name.trim(), state || null, district || null,
+         location ? JSON.stringify(location) : null]
+    );
+
+    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    sendJson(req, res, 201, { user: rowToProfile(rows[0]) });
+}
+
+/** GET /api/users/:mobile — fetch user profile */
+async function handleGetUser(req, res, mobile) {
+    assertDbAvailable();
+
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+        throw createHttpError(400, 'Invalid mobile number.');
+    }
+
+    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
+
+    if (!rows.length) {
+        throw createHttpError(404, 'User not found.');
+    }
+
+    sendJson(req, res, 200, { user: rowToProfile(rows[0]) });
+}
+
+/** PUT /api/users/:mobile/login — update last_login timestamp */
+async function handleUpdateLogin(req, res, mobile) {
+    assertDbAvailable();
+
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+        throw createHttpError(400, 'Invalid mobile number.');
+    }
+
+    const [result] = await db.execute(
+        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE mobile = ?',
+        [mobile]
+    );
+
+    if (result.affectedRows === 0) {
+        throw createHttpError(404, 'User not found.');
+    }
+
+    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    sendJson(req, res, 200, { user: rowToProfile(rows[0]) });
+}
+
+/** Convert a DB row to a clean profile object for the frontend */
+function rowToProfile(row) {
+    if (!row) return null;
+    return {
+        uid:       row.uid,
+        mobile:    row.mobile,
+        name:      row.name,
+        state:     row.state     || '',
+        district:  row.district  || '',
+        location:  row.location  || null,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+        lastLogin: row.last_login ? new Date(row.last_login).toISOString()  : null
+    };
+}
+
+// ─── Static file server ───────────────────────────────────────────────────────
+
 function isForbiddenStaticPath(pathname) {
     const segments = pathname.split('/').filter(Boolean);
     if (segments.some(segment => segment.startsWith('.'))) return true;
@@ -353,6 +514,8 @@ async function serveStaticFile(req, res) {
     }
 }
 
+// ─── Main request handler ─────────────────────────────────────────────────────
+
 async function handleRequest(req, res) {
     const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
@@ -365,11 +528,13 @@ async function handleRequest(req, res) {
                 return;
             }
 
+            // Health
             if (requestUrl.pathname === '/api/health' && req.method === 'GET') {
-                sendJson(req, res, 200, { ok: true });
+                sendJson(req, res, 200, { ok: true, db: db !== null });
                 return;
             }
 
+            // OTP
             if (requestUrl.pathname === '/api/otp/send' && req.method === 'POST') {
                 await handleSendOtp(req, res);
                 return;
@@ -377,6 +542,24 @@ async function handleRequest(req, res) {
 
             if (requestUrl.pathname === '/api/otp/verify' && req.method === 'POST') {
                 await handleVerifyOtp(req, res);
+                return;
+            }
+
+            // Users
+            if (requestUrl.pathname === '/api/users' && req.method === 'POST') {
+                await handleCreateUser(req, res);
+                return;
+            }
+
+            const userMobileMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})$/);
+            if (userMobileMatch && req.method === 'GET') {
+                await handleGetUser(req, res, userMobileMatch[1]);
+                return;
+            }
+
+            const loginUpdateMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})\/login$/);
+            if (loginUpdateMatch && req.method === 'PUT') {
+                await handleUpdateLogin(req, res, loginUpdateMatch[1]);
                 return;
             }
 
@@ -403,6 +586,10 @@ async function handleRequest(req, res) {
     }
 }
 
-http.createServer(handleRequest).listen(PORT, () => {
-    console.log(`AgriFarmers server running at http://localhost:${PORT}`);
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
+
+initDb().then(() => {
+    http.createServer(handleRequest).listen(PORT, () => {
+        console.log(`AgriFarmers server running at http://localhost:${PORT}`);
+    });
 });
