@@ -46,7 +46,7 @@ The platform follows a **mobile‑first, responsive** design using **HTML5, CSS3
 
 | Area              | Technologies                                  |
 |-------------------|-----------------------------------------------|
-| **Frontend**      | HTML5, CSS3, JavaScript (ES6+), Tailwind CSS  |
+| **Frontend**      | HTML5, CSS3, JavaScript (ES6+), Tailwind CSS, Modular browser scripts |
 | **OTP API**       | Node.js HTTP server, TextBee SMS API          |
 | **Data**          | Browser LocalStorage for prototype profile data |
 | **Icons & Assets** | Custom CSS + Emoji (optionally integrate Font Awesome) |

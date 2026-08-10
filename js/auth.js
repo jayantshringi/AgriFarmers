@@ -5,7 +5,7 @@ import {
     setCurrentSession,
     getCurrentSession,
     clearCurrentSession
-} from './database.js';
+} from './storage.js';
 
 let activePhoneNumber = null;
 let pendingSignupData = null;
