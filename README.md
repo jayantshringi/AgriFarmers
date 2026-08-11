@@ -122,26 +122,6 @@ Elements with matching `id` attributes are translated dynamically upon language 
 
 ---
 
-## 🌐 Deployment Options
-
-### 1. Unified Full-Stack Deployment (Recommended)
-Deploy `server.js` to platforms like **Render**, **Railway**, or **Heroku**:
-- Set environment variables (`TEXTBEE_API_KEY`, `DATABASE_URL`, etc.) in your provider dashboard.
-- The Node server serves both static UI files and backend `/api/*` endpoints on a single port.
-
-### 2. Decoupled Static Hosting + API Server
-Host the static frontend on **GitHub Pages**, **Vercel**, or **Netlify**, and deploy `server.js` separately:
-1. Deploy the API server (e.g. `https://api.yourdomain.com`).
-2. Update `js/app-config.js`:
-   ```js
-   window.AGRIFARMERS_CONFIG = {
-       otpApiBaseUrl: 'https://api.yourdomain.com'
-   };
-   ```
-3. Set `CORS_ORIGIN=https://your-github-username.github.io` on your API server.
-
----
-
 ## 📜 License
 
 Distributed under the **MIT License**. See project repository for details.
