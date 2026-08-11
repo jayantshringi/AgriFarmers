@@ -202,7 +202,7 @@ console.log('🚜 AgriFarmers App Initializing...');
 
 // Global Variables
 let currentUser = null;
-let currentLanguage = 'en';
+let currentLanguage = 'hi';
 let userLocation = null;
 let otpTimer = null;
 let otpTimeLeft = 120;
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 800);
     
     // Load saved language preference
-    const savedLang = localStorage.getItem('agrifarmers_language') || 'en';
+    const savedLang = localStorage.getItem('agrifarmers_language') || 'hi';
     changeLanguage(savedLang);
     
     // Update online status
