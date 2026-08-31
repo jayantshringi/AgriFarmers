@@ -563,6 +563,14 @@ async function handleRequest(req, res) {
                 return;
             }
 
+            // AgroVision Precision Agriculture Additive Router
+            if (requestUrl.pathname.startsWith('/api/agrovision')) {
+                const { handleAgrovisionRequest } = require('./routes/agrovision');
+                if (await handleAgrovisionRequest(req, res, requestUrl, { sendJson, readJsonBody, createHttpError })) {
+                    return;
+                }
+            }
+
             throw createHttpError(404, 'API route not found.');
         }
 

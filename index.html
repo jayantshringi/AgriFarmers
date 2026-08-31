@@ -36,6 +36,10 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/app-config.js"></script>
@@ -198,16 +202,46 @@
                     <!-- Action Buttons -->
                     <div class="space-y-4">
                         <button onclick="showPage('loginPage')"
-                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors">
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-md">
                             <i class="fas fa-sign-in-alt mr-2"></i>
-                            <span id="getStartedBtn">Get Started</span>
+                            <span id="getStartedBtn">Get Started (Login with OTP)</span>
                         </button>
+
+                        <div>
+                            <button onclick="enterDemoMode()"
+                                class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-sm inline-flex items-center gap-2">
+                                <i class="fas fa-bolt text-emerald-600"></i>
+                                <span>Demo Mode (Instant Dashboard & Precision Hub)</span>
+                            </button>
+                        </div>
+
                         <p class="text-gray-600">
                             <span id="noAccountText">Don't have an account?</span>
                             <button onclick="showPage('signUpPage')"
                                 class="text-green-600 font-medium hover:underline ml-1" id="signUpBtn">Sign Up</button>
                         </p>
                     </div>
+
+                    <script>
+                        function enterDemoMode() {
+                            const demoUser = {
+                                uid: 'user_9876543210',
+                                name: 'Sardar Gurdeep Singh',
+                                mobile: '9876543210',
+                                state: 'Punjab',
+                                district: 'Ludhiana',
+                                location: { lat: 30.9010, lon: 75.8573 }
+                            };
+                            window.currentUser = demoUser;
+                            localStorage.setItem('agrifarmers_user', JSON.stringify(demoUser));
+                            if (window.showPage) window.showPage('homePage');
+                            if (window.updateUserInfo) window.updateUserInfo();
+                            if (window.loadDashboardData) window.loadDashboardData();
+                            const logoutBtn = document.getElementById('logoutButton');
+                            if (logoutBtn) logoutBtn.classList.remove('hidden');
+                            if (window.showToast) window.showToast('Welcome to AgriFarmers Precision Agriculture Demo!', 'success');
+                        }
+                    </script>
                 </div>
             </div>
 
@@ -458,6 +492,100 @@
                     </div>
                 </div>
 
+                <!-- Precision Agriculture Hub (Powered by AgroVision) -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                <i class="fas fa-brain text-green-600"></i>
+                                <span>Precision Agriculture Hub</span>
+                            </h3>
+                            <p class="text-sm text-gray-600">AI-powered crop health, soil diagnostics, mandi locator & water planning</p>
+                        </div>
+                        <span class="hidden sm:inline-flex text-xs font-bold px-2.5 py-1 bg-green-100 text-green-800 rounded-full border border-green-200">
+                            AgroVision AI v2.0
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Feature 1: Crop Doctor -->
+                        <div onclick="openCropDoctorModal()"
+                            class="dashboard-card bg-gradient-to-br from-white to-green-50/60 p-5 rounded-xl shadow-md border border-green-200 hover:border-green-400 flex flex-col justify-between">
+                            <div>
+                                <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center text-green-700 text-2xl mb-3 shadow-sm">
+                                    <i class="fas fa-stethoscope"></i>
+                                </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-gray-900 text-base">Crop Doctor AI</h4>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-green-600 text-white rounded-full">AI Vision</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-3">Scan leaf photos to diagnose diseases, fungal rusts, and get organic/chemical remedies.</p>
+                            </div>
+                            <button type="button" class="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-camera"></i>
+                                <span>Diagnose Leaf</span>
+                            </button>
+                        </div>
+
+                        <!-- Feature 2: Soil Lab & Prescription -->
+                        <div onclick="openSoilPrescriptionModal()"
+                            class="dashboard-card bg-gradient-to-br from-white to-emerald-50/60 p-5 rounded-xl shadow-md border border-emerald-200 hover:border-emerald-400 flex flex-col justify-between">
+                            <div>
+                                <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 text-2xl mb-3 shadow-sm">
+                                    <i class="fas fa-flask"></i>
+                                </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-gray-900 text-base">Soil Prescription</h4>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-600 text-white rounded-full">NPK & pH</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-3">Calculate exact Urea, DAP, MOP bag doses & 3-stage application schedule for your land.</p>
+                            </div>
+                            <button type="button" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-calculator"></i>
+                                <span>Calculate Dose</span>
+                            </button>
+                        </div>
+
+                        <!-- Feature 3: Farm Map & Mandis -->
+                        <div onclick="openFarmMapModal()"
+                            class="dashboard-card bg-gradient-to-br from-white to-blue-50/60 p-5 rounded-xl shadow-md border border-blue-200 hover:border-blue-400 flex flex-col justify-between">
+                            <div>
+                                <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-blue-700 text-2xl mb-3 shadow-sm">
+                                    <i class="fas fa-map-location-dot"></i>
+                                </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-gray-900 text-base">Farm Map & Mandis</h4>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded-full">GPS Live</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-3">Locate nearby APMC Grain Mandis with live rates, KVK Soil Labs, and certified seed dealers.</p>
+                            </div>
+                            <button type="button" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-compass"></i>
+                                <span>Explore Map</span>
+                            </button>
+                        </div>
+
+                        <!-- Feature 4: Smart Irrigation Planner -->
+                        <div onclick="openIrrigationPlannerModal()"
+                            class="dashboard-card bg-gradient-to-br from-white to-cyan-50/60 p-5 rounded-xl shadow-md border border-cyan-200 hover:border-cyan-400 flex flex-col justify-between">
+                            <div>
+                                <div class="w-12 h-12 rounded-xl bg-cyan-100 flex items-center justify-center text-cyan-700 text-2xl mb-3 shadow-sm">
+                                    <i class="fas fa-faucet-drip"></i>
+                                </div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <h4 class="font-bold text-gray-900 text-base">Smart Irrigation</h4>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 bg-cyan-600 text-white rounded-full">ET0 Water</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mb-3">FAO-56 Evapotranspiration schedule, tube-well run times, and 7-day watering calendar.</p>
+                            </div>
+                            <button type="button" class="w-full py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                <i class="fas fa-droplet"></i>
+                                <span>Plan Water</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Farming Advisory -->
                 <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-8">
                     <div class="flex items-start">
@@ -573,6 +701,536 @@
                 </div>
             </div>
         </div>
+
+        <!-- ════════════════════════════════════════════════════════════════════════ -->
+        <!-- AGROVISION PRECISION AGRICULTURE MODALS (ADDITIVE EXTENSIONS)            -->
+        <!-- ════════════════════════════════════════════════════════════════════════ -->
+
+        <!-- 1. Crop Doctor AI Modal -->
+        <div id="cropDoctorModal" class="modal-overlay">
+            <div class="modal-content !max-w-2xl">
+                <div class="p-6">
+                    <!-- Modal Header -->
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-green-100 text-green-700 flex items-center justify-center text-xl shadow-sm">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 leading-tight">Crop Doctor AI Diagnosis</h3>
+                                <p class="text-xs text-gray-500">Precision leaf disease analysis & scientific remedies</p>
+                            </div>
+                        </div>
+                        <button onclick="closeCropDoctorModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Crop Selector & Live Camera Modal (if active) -->
+                    <div class="flex items-center gap-3 mb-4">
+                        <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Target Crop:</label>
+                        <select id="cdCropSelect" class="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 font-medium">
+                            <option value="Wheat">🌾 Wheat (गेंहू)</option>
+                            <option value="Rice">🍚 Rice / Paddy (धान)</option>
+                            <option value="Cotton">🌸 Cotton (कपास)</option>
+                            <option value="Maize">🌽 Maize (मक्का)</option>
+                            <option value="Sugarcane">🎋 Sugarcane (गन्ना)</option>
+                            <option value="Soybean">🫘 Soybean (सोयाबीन)</option>
+                            <option value="Groundnut">🥜 Groundnut (मूंगफली)</option>
+                            <option value="Mustard">🌿 Mustard (सरसों)</option>
+                            <option value="Potato">🥔 Potato (आलू)</option>
+                            <option value="Tomato">🍅 Tomato (टमाटर)</option>
+                        </select>
+                    </div>
+
+                    <!-- Quick 1-Click Sample Leaf Presets -->
+                    <div class="mb-5">
+                        <p class="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-sparkles text-amber-500"></i>
+                            <span>Quick Test with Diagnostic Leaf Samples:</span>
+                        </p>
+                        <div id="cdSamplePresets" class="grid grid-cols-2 sm:grid-cols-5 gap-2"></div>
+                    </div>
+
+                    <!-- Upload Zone -->
+                    <div id="cdUploadZone" class="border-2 border-dashed border-green-300 bg-green-50/40 hover:bg-green-50 rounded-2xl p-6 text-center transition-all">
+                        <input type="file" id="cdFileInput" accept="image/*" class="hidden" onchange="window.AgroVisionDoctor.handleFileSelected(event)" />
+                        <div class="w-16 h-16 rounded-full bg-green-100 text-green-600 mx-auto flex items-center justify-center text-2xl mb-3 shadow-inner">
+                            <i class="fas fa-cloud-arrow-up"></i>
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-sm mb-1">Upload or Drag & Drop Crop Leaf Photo</h4>
+                        <p class="text-xs text-gray-500 mb-4">Supports PNG, JPG, JPEG up to 10MB</p>
+                        
+                        <div class="flex justify-center gap-3">
+                            <button type="button" onclick="document.getElementById('cdFileInput').click()"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                                <i class="fas fa-folder-open"></i>
+                                <span>Choose File</span>
+                            </button>
+                            <button type="button" onclick="window.AgroVisionDoctor.openCamera()"
+                                class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                                <i class="fas fa-camera"></i>
+                                <span>Take Photo</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Embedded Camera Modal -->
+                    <div id="cdCameraModal" class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+                        <div class="bg-gray-900 rounded-2xl overflow-hidden max-w-md w-full p-4 border border-gray-700 text-center">
+                            <video id="cdCameraVideo" autoplay playsinline class="w-full h-64 bg-black rounded-xl object-cover mb-3"></video>
+                            <canvas id="cdCameraCanvas" class="hidden"></canvas>
+                            <div class="flex justify-center gap-3">
+                                <button type="button" onclick="window.AgroVisionDoctor.captureCameraPhoto()" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl">
+                                    <i class="fas fa-camera mr-2"></i>Capture
+                                </button>
+                                <button type="button" onclick="window.AgroVisionDoctor.stopCamera()" class="px-4 py-2.5 bg-gray-700 text-white font-bold text-sm rounded-xl">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview & Action Zone -->
+                    <div id="cdPreviewZone" class="hidden text-center py-2">
+                        <p id="cdPreviewTitle" class="font-bold text-sm text-gray-800 mb-3"></p>
+                        <div id="cdImagePreview" class="mb-4"></div>
+                        <div class="flex justify-center gap-3">
+                            <button type="button" onclick="window.AgroVisionDoctor.startDiagnosis()"
+                                class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl shadow-md flex items-center gap-2">
+                                <i class="fas fa-microscope"></i>
+                                <span>Run AI Vision Diagnosis</span>
+                            </button>
+                            <button type="button" onclick="window.AgroVisionDoctor.reset()"
+                                class="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold text-sm rounded-xl">
+                                <span>Change Image</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scanning Simulation Zone -->
+                    <div id="cdScanningZone" class="hidden text-center py-8">
+                        <div class="relative w-24 h-24 mx-auto mb-4">
+                            <div class="absolute inset-0 rounded-full border-4 border-green-200 animate-pulse"></div>
+                            <div class="w-full h-full rounded-full border-4 border-t-green-600 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                            <div class="absolute inset-0 flex items-center justify-center text-green-600 text-2xl">
+                                <i class="fas fa-brain animate-bounce"></i>
+                            </div>
+                        </div>
+                        <h4 class="font-bold text-gray-800 text-base mb-1">Scanning Leaf Cellular Structure</h4>
+                        <p id="cdScanStatusText" class="text-xs text-gray-600 mb-4">Analyzing color histogram & lesion vectors...</p>
+                        <div class="w-64 h-2 bg-gray-200 rounded-full mx-auto overflow-hidden">
+                            <div id="cdScanProgress" class="h-full bg-green-600 transition-all duration-300" style="width: 25%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Diagnosis Result Zone -->
+                    <div id="cdResultZone" class="hidden">
+                        <!-- Result Header Card -->
+                        <div class="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-5 text-white mb-5 shadow-lg">
+                            <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span id="cdSeverityBadge"></span>
+                                        <span id="cdDiagnosisId" class="text-[10px] font-mono text-gray-400 bg-gray-800 px-2 py-0.5 rounded border border-gray-700"></span>
+                                    </div>
+                                    <h4 id="cdDiseaseName" class="text-2xl font-extrabold text-white"></h4>
+                                    <p id="cdScientificName" class="text-xs text-gray-300 italic"></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">AI Confidence</p>
+                                    <p id="cdConfidenceScore" class="text-2xl font-black text-green-400 font-mono"></p>
+                                    <div class="w-24 h-1.5 bg-gray-700 rounded-full mt-1 overflow-hidden">
+                                        <div id="cdConfidenceBar" class="h-full bg-green-400"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab Navigation -->
+                        <div class="flex border-b border-gray-200 mb-4 gap-2 text-xs font-bold">
+                            <button id="cdTabBtn_organic" onclick="window.AgroVisionDoctor.switchTab('organic')"
+                                class="px-4 py-2 border-b-2 border-green-600 text-green-700 bg-green-50 rounded-t-lg transition-all flex items-center gap-1.5">
+                                <i class="fas fa-leaf text-green-600"></i>
+                                <span>Organic Remedies</span>
+                            </button>
+                            <button id="cdTabBtn_chemical" onclick="window.AgroVisionDoctor.switchTab('chemical')"
+                                class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 rounded-t-lg transition-all flex items-center gap-1.5">
+                                <i class="fas fa-flask text-blue-600"></i>
+                                <span>Chemical Control</span>
+                            </button>
+                            <button id="cdTabBtn_prevent" onclick="window.AgroVisionDoctor.switchTab('prevent')"
+                                class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 rounded-t-lg transition-all flex items-center gap-1.5">
+                                <i class="fas fa-shield-halved text-amber-600"></i>
+                                <span>Prevention</span>
+                            </button>
+                            <button id="cdTabBtn_symptoms" onclick="window.AgroVisionDoctor.switchTab('symptoms')"
+                                class="px-4 py-2 border-b-2 border-transparent text-gray-500 hover:text-gray-800 rounded-t-lg transition-all flex items-center gap-1.5">
+                                <i class="fas fa-list-check text-purple-600"></i>
+                                <span>Symptoms</span>
+                            </button>
+                        </div>
+
+                        <!-- Tab Contents -->
+                        <div class="mb-5">
+                            <ul id="cdTabContent_organic" class="space-y-2">
+                                <div id="cdTabOrganic"></div>
+                            </ul>
+                            <ul id="cdTabContent_chemical" class="hidden space-y-2">
+                                <div id="cdTabChemical"></div>
+                            </ul>
+                            <ul id="cdTabContent_prevent" class="hidden space-y-2">
+                                <div id="cdTabPrevent"></div>
+                            </ul>
+                            <ul id="cdTabContent_symptoms" class="hidden space-y-2">
+                                <div id="cdTabSymptoms"></div>
+                            </ul>
+                        </div>
+
+                        <!-- Prescription Action Buttons -->
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-200">
+                            <button type="button" onclick="window.AgroVisionDoctor.reset()"
+                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5">
+                                <i class="fas fa-redo"></i>
+                                <span>Diagnose Another Leaf</span>
+                            </button>
+                            <button type="button" onclick="window.AgroVisionDoctor.print()"
+                                class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow-sm">
+                                <i class="fas fa-file-prescription"></i>
+                                <span>Print Prescription</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Soil Lab & Dynamic Fertilizer Prescription Modal -->
+        <div id="soilPrescriptionModal" class="modal-overlay">
+            <div class="modal-content !max-w-3xl">
+                <div class="p-6">
+                    <!-- Modal Header -->
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-xl shadow-sm">
+                                <i class="fas fa-flask"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 leading-tight">Soil Lab & Fertilizer Prescription</h3>
+                                <p class="text-xs text-gray-500">NPK analysis, pH calibration & exact commercial fertilizer dosage</p>
+                            </div>
+                        </div>
+                        <button onclick="closeSoilPrescriptionModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Input Controls Row -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Target Crop:</label>
+                            <select id="spCropSelect" onchange="window.AgroVisionSoil.onCropChange(this.value)"
+                                class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-800">
+                                <option value="Wheat">🌾 Wheat (गेंहू)</option>
+                                <option value="Rice">🍚 Rice / Paddy (धान)</option>
+                                <option value="Maize">🌽 Maize (मक्का)</option>
+                                <option value="Cotton">🌸 Cotton (कपास)</option>
+                                <option value="Sugarcane">🎋 Sugarcane (गन्ना)</option>
+                                <option value="Soybean">🫘 Soybean (सोयाबीन)</option>
+                                <option value="Groundnut">🥜 Groundnut (मूंगफली)</option>
+                                <option value="Mustard">🌿 Mustard (सरसों)</option>
+                                <option value="Potato">🥔 Potato (आलू)</option>
+                                <option value="Bajra">🌾 Bajra (बाजरा)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Total Land Area (Acres):</label>
+                            <input type="number" id="spAreaInput" min="0.1" max="500" step="0.5" value="2.0"
+                                oninput="window.AgroVisionSoil.onSliderChange('area', this.value)"
+                                class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-800" />
+                        </div>
+                    </div>
+
+                    <!-- 4 Interactive Sliders (N, P, K, pH) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                        <!-- Nitrogen -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-gray-700">Nitrogen (N)</span>
+                                <span id="spBadgeN" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
+                            </div>
+                            <input type="range" id="spSliderN" min="0" max="250" value="80"
+                                oninput="window.AgroVisionSoil.onSliderChange('n', this.value)"
+                                class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+                            <p id="spValN" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">80 kg/ha</p>
+                        </div>
+
+                        <!-- Phosphorus -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-gray-700">Phosphorus (P)</span>
+                                <span id="spBadgeP" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
+                            </div>
+                            <input type="range" id="spSliderP" min="0" max="150" value="50"
+                                oninput="window.AgroVisionSoil.onSliderChange('p', this.value)"
+                                class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+                            <p id="spValP" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">50 kg/ha</p>
+                        </div>
+
+                        <!-- Potassium -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-gray-700">Potassium (K)</span>
+                                <span id="spBadgeK" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
+                            </div>
+                            <input type="range" id="spSliderK" min="0" max="150" value="60"
+                                oninput="window.AgroVisionSoil.onSliderChange('k', this.value)"
+                                class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+                            <p id="spValK" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">60 kg/ha</p>
+                        </div>
+
+                        <!-- Soil pH -->
+                        <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-bold text-gray-700">Soil pH</span>
+                                <span id="spBadgePH" class="text-xs font-bold"></span>
+                            </div>
+                            <input type="range" id="spSliderPH" min="3.5" max="10.5" step="0.1" value="6.5"
+                                oninput="window.AgroVisionSoil.onSliderChange('ph', this.value)"
+                                class="w-full h-1.5 bg-gradient-to-r from-red-400 via-green-400 to-purple-400 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
+                            <p id="spValPH" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">6.5</p>
+                            <p id="spDescPH" class="text-[10px] text-gray-500 text-center truncate mt-0.5"></p>
+                        </div>
+                    </div>
+
+                    <!-- Loading Spinner -->
+                    <div id="spLoading" class="hidden text-center py-3">
+                        <i class="fas fa-spinner fa-spin text-emerald-600"></i>
+                        <span class="text-xs text-gray-500 ml-2">Calculating ICAR precision prescription...</span>
+                    </div>
+
+                    <!-- Fertilizer Prescription Bag Cards -->
+                    <div class="mb-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-bold text-sm text-gray-800 flex items-center gap-1.5">
+                                <i class="fas fa-sack-dollar text-emerald-600"></i>
+                                <span>Commercial Fertilizer Doses Required</span>
+                            </h4>
+                            <span class="text-xs font-extrabold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-lg border border-emerald-200">
+                                Estimated Cost: <span id="spTotalCost">₹0</span>
+                            </span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <!-- Urea -->
+                            <div class="bg-gradient-to-br from-green-50 to-emerald-100/60 p-4 rounded-xl border border-emerald-200">
+                                <p class="text-xs font-bold text-emerald-900">Urea (46% N)</p>
+                                <p id="spUreaBags" class="text-lg font-black text-emerald-800 my-1">-</p>
+                                <p class="text-[10px] text-emerald-700">Split into 3 doses across crop stages</p>
+                            </div>
+
+                            <!-- DAP -->
+                            <div class="bg-gradient-to-br from-blue-50 to-indigo-100/60 p-4 rounded-xl border border-blue-200">
+                                <p class="text-xs font-bold text-blue-900">DAP (18-46-0)</p>
+                                <p id="spDapBags" class="text-lg font-black text-blue-800 my-1">-</p>
+                                <p class="text-[10px] text-blue-700">100% Basal dose at seed drilling</p>
+                            </div>
+
+                            <!-- MOP -->
+                            <div class="bg-gradient-to-br from-purple-50 to-pink-100/60 p-4 rounded-xl border border-purple-200">
+                                <p class="text-xs font-bold text-purple-900">MOP / Potash (60% K2O)</p>
+                                <p id="spMopBags" class="text-lg font-black text-purple-800 my-1">-</p>
+                                <p class="text-[10px] text-purple-700">75% Basal + 25% Panicle Filling</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3-Stage Application Calendar -->
+                    <div class="mb-5">
+                        <h4 class="font-bold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
+                            <i class="fas fa-calendar-check text-emerald-600"></i>
+                            <span>Step-by-Step Fertilizer Application Schedule</span>
+                        </h4>
+                        <div id="spScheduleTimeline" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Organic Carbon Recommendations -->
+                    <div class="bg-green-50/70 border border-green-200 rounded-xl p-4">
+                        <h5 class="font-bold text-xs text-green-900 mb-2 flex items-center gap-1.5">
+                            <i class="fas fa-seedling text-green-600"></i>
+                            <span>Soil Health & Organic Carbon Enrichment:</span>
+                        </h5>
+                        <ul id="spOrganicList" class="space-y-1"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Interactive Farm Map & Mandi Locator Modal -->
+        <div id="farmMapModal" class="modal-overlay">
+            <div class="modal-content !max-w-4xl !h-[88vh] flex flex-col">
+                <div class="p-4 md:p-6 pb-2 border-b border-gray-100 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-xl shadow-sm">
+                            <i class="fas fa-map-location-dot"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 leading-tight">Farm Map & Mandi Locator</h3>
+                            <p class="text-xs text-gray-500">Live APMC Mandis, KVK Soil Labs, and Certified Agri Dealers</p>
+                        </div>
+                    </div>
+                    <button onclick="closeFarmMapModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Map Filters and Search -->
+                <div class="p-4 pb-2 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap gap-1.5">
+                        <button id="mapFilterBtn_all" onclick="window.AgroVisionMap.setFilter('all')" class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold transition-colors">All</button>
+                        <button id="mapFilterBtn_mandi" onclick="window.AgroVisionMap.setFilter('mandi')" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold transition-colors">🌾 Mandis</button>
+                        <button id="mapFilterBtn_lab" onclick="window.AgroVisionMap.setFilter('lab')" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold transition-colors">🧪 Soil Labs / KVK</button>
+                        <button id="mapFilterBtn_dealer" onclick="window.AgroVisionMap.setFilter('dealer')" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold transition-colors">📦 Dealers</button>
+                        <button id="mapFilterBtn_chc" onclick="window.AgroVisionMap.setFilter('chc')" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full text-xs font-bold transition-colors">🚜 Custom Machinery</button>
+                    </div>
+                    <div class="relative w-full sm:w-64">
+                        <input type="text" id="mapSearchInput" placeholder="Search Mandi or commodity..." oninput="window.AgroVisionMap.onSearchInput(this.value)"
+                            class="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500" />
+                        <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Main Map and List View Grid -->
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-3 overflow-hidden">
+                    <!-- Leaflet Container -->
+                    <div id="farmMapContainer" class="md:col-span-2 h-64 md:h-full w-full bg-gray-100 z-10"></div>
+
+                    <!-- Facility Sidebar List -->
+                    <div class="p-3 bg-gray-50 border-t md:border-t-0 md:border-l border-gray-200 overflow-y-auto space-y-2 h-full" id="farmFacilityList">
+                        <!-- Populated dynamically by farm-map.js -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Smart Evapotranspiration (ET0) Irrigation Planner Modal -->
+        <div id="irrigationPlannerModal" class="modal-overlay">
+            <div class="modal-content !max-w-3xl">
+                <div class="p-6">
+                    <!-- Modal Header -->
+                    <div class="flex justify-between items-center pb-4 mb-4 border-b border-gray-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-xl shadow-sm">
+                                <i class="fas fa-faucet-drip"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900 leading-tight">Smart ET0 Irrigation Planner</h3>
+                                <p class="text-xs text-gray-500">FAO-56 Evapotranspiration water schedule & pump run-time calculator</p>
+                            </div>
+                        </div>
+                        <button onclick="closeIrrigationPlannerModal()" class="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors">
+                            <i class="fas fa-times text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Inputs Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Crop Type:</label>
+                            <select id="ipCropSelect" onchange="window.AgroVisionIrrigation.onInputChange('crop', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
+                                <option value="Wheat">🌾 Wheat (Kc: 1.15)</option>
+                                <option value="Rice">🍚 Paddy / Rice (Kc: 1.20)</option>
+                                <option value="Maize">🌽 Maize (Kc: 1.20)</option>
+                                <option value="Cotton">🌸 Cotton (Kc: 1.20)</option>
+                                <option value="Sugarcane">🎋 Sugarcane (Kc: 1.25)</option>
+                                <option value="Mustard">🌿 Mustard (Kc: 1.05)</option>
+                                <option value="Potato">🥔 Potato (Kc: 1.15)</option>
+                                <option value="Soybean">🫘 Soybean (Kc: 1.15)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Growth Stage:</label>
+                            <select id="ipStageSelect" onchange="window.AgroVisionIrrigation.onInputChange('stage', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
+                                <option value="initial">🌱 Initial / Sowing</option>
+                                <option value="mid" selected>🌿 Mid-Season / Peak Vegetative</option>
+                                <option value="late">🌾 Late Season / Ripening</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Soil Texture:</label>
+                            <select id="ipSoilSelect" onchange="window.AgroVisionIrrigation.onInputChange('soil', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
+                                <option value="Loam" selected>Loam (Optimal Retention)</option>
+                                <option value="Sandy Loam">Sandy Loam</option>
+                                <option value="Clay Loam">Clay Loam</option>
+                                <option value="Black Cotton">Black Cotton Soil (Deep)</option>
+                                <option value="Sandy">Sandy Soil (Fast Infiltration)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Irrigation System:</label>
+                            <select id="ipMethodSelect" onchange="window.AgroVisionIrrigation.onInputChange('method', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
+                                <option value="drip" selected>💧 Drip (90% Efficiency)</option>
+                                <option value="sprinkler">🚿 Micro-Sprinkler (80%)</option>
+                                <option value="flood">🌊 Flood / Furrow (55%)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Land Area (Acres):</label>
+                            <input type="number" id="ipAreaInput" min="0.1" max="100" step="0.5" value="2.0"
+                                oninput="window.AgroVisionIrrigation.onInputChange('area', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg font-semibold" />
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-700 mb-1">Avg Temperature (°C):</label>
+                            <input type="number" id="ipTempInput" min="5" max="50" step="1" value="26"
+                                oninput="window.AgroVisionIrrigation.onInputChange('temp', this.value)"
+                                class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg font-semibold" />
+                        </div>
+                    </div>
+
+                    <!-- Water Metrics Summary Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                        <div class="bg-gradient-to-br from-cyan-50 to-blue-100/60 p-4 rounded-xl border border-cyan-200">
+                            <p class="text-xs font-bold text-cyan-900">Gross Water Requirement</p>
+                            <p id="ipDailyLiters" class="text-xl font-black text-cyan-800 my-1">-</p>
+                            <p id="ipEtcVal" class="text-[10px] text-cyan-700 font-mono">-</p>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-100/60 p-4 rounded-xl border border-blue-200">
+                            <p class="text-xs font-bold text-blue-900">5 HP Pump Run-Time</p>
+                            <p id="ipPumpRunTime" class="text-xl font-black text-blue-800 my-1">-</p>
+                            <p class="text-[10px] text-blue-700">Discharge rate ~28,000 L/hr</p>
+                        </div>
+
+                        <div class="bg-gradient-to-br from-emerald-50 to-green-100/60 p-4 rounded-xl border border-green-200">
+                            <p class="text-xs font-bold text-green-900">Water Conservation</p>
+                            <p id="ipWaterSavings" class="text-sm font-black text-green-800 my-1">-</p>
+                            <div class="w-full h-1.5 bg-green-200 rounded-full overflow-hidden mt-2">
+                                <div id="ipSavingsBar" class="h-full bg-green-600"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7-Day Precision Irrigation Calendar -->
+                    <div>
+                        <h4 class="font-bold text-sm text-gray-800 mb-2.5 flex items-center gap-1.5">
+                            <i class="fas fa-calendar-days text-cyan-600"></i>
+                            <span>Next 7-Day Watering Schedule & Pump Run Times</span>
+                        </h4>
+                        <div id="ipScheduleGrid" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- PWA CORE SCRIPT -->
@@ -580,6 +1238,11 @@
     <script src="script.js"></script>
     <script src="js/auth-ui.js"></script>
 
+    <!-- AGROVISION PRECISION AGRICULTURE MODULES (ADDITIVE) -->
+    <script src="js/features/crop-doctor.js"></script>
+    <script src="js/features/soil-prescription.js"></script>
+    <script src="js/features/farm-map.js"></script>
+    <script src="js/features/irrigation-planner.js"></script>
 
 </body>
 

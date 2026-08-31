@@ -554,22 +554,63 @@ function updateUserInfo() {
     const farmerName = document.getElementById('farmerName');
     const farmerLocation = document.getElementById('farmerLocation');
     
-    if (farmerName) farmerName.textContent = currentUser.name;
+    if (farmerName) farmerName.textContent = currentUser.name || 'Farmer';
     if (farmerLocation) {
-        farmerLocation.textContent = `${currentUser.district}, ${currentUser.state}`;
+        if (currentUser.district && currentUser.state) {
+            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+        } else if (currentUser.locationName) {
+            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.locationName}`;
+        }
     }
 }
 
-// Get user location
+// Get real-time accurate user location
 function getUserLocation() {
+    const farmerLocation = document.getElementById('farmerLocation');
+
+    // Immediate fallback display while fetching GPS
+    if (currentUser && currentUser.district && currentUser.state) {
+        if (farmerLocation) {
+            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+        }
+    }
+
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-            (position) => {
+            async (position) => {
                 userLocation = {
                     lat: position.coords.latitude,
-                    lon: position.coords.longitude
+                    lon: position.coords.longitude,
+                    accuracy: position.coords.accuracy
                 };
+                window.userLocation = userLocation;
                 
+                // Real-time reverse geocoding to get exact district / city
+                try {
+                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLocation.lat}&longitude=${userLocation.lon}&localityLanguage=en`);
+                    if (res.ok) {
+                        const geo = await res.json();
+                        const city = geo.locality || geo.city || geo.principalSubdivisionDistrict || currentUser?.district || 'Your Location';
+                        const state = geo.principalSubdivision || currentUser?.state || '';
+                        const formattedLoc = state ? `${city}, ${state}` : city;
+
+                        if (farmerLocation) {
+                            farmerLocation.innerHTML = `<i class="fas fa-location-crosshairs text-xs mr-1 text-green-200"></i>${formattedLoc} <span class="text-[10px] opacity-75 font-mono">(${userLocation.lat.toFixed(2)}°N, ${userLocation.lon.toFixed(2)}°E)</span>`;
+                        }
+                        if (currentUser) {
+                            currentUser.district = city;
+                            currentUser.state = state || currentUser.state;
+                            currentUser.locationName = formattedLoc;
+                        }
+                    } else if (farmerLocation && currentUser) {
+                        farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+                    }
+                } catch (_) {
+                    if (farmerLocation && currentUser) {
+                        farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+                    }
+                }
+
                 if (currentUser) {
                     currentUser.location = userLocation;
                     localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
@@ -577,22 +618,28 @@ function getUserLocation() {
                 
                 loadWeatherData(userLocation.lat, userLocation.lon);
             },
-            () => {
-                // Use default location (Delhi) or user's district
-                userLocation = { lat: 28.6139, lon: 77.2090 };
-                loadWeatherData(userLocation.lat, userLocation.lon);
-                
-                const farmerLocation = document.getElementById('farmerLocation');
+            (error) => {
+                console.warn('Geolocation warning / permission denied:', error.message);
+                // Use default location based on user profile or Punjab center
+                userLocation = (currentUser && currentUser.state === 'Haryana') ? { lat: 29.6857, lon: 76.9905 }
+                    : (currentUser && currentUser.state === 'Rajasthan') ? { lat: 26.8124, lon: 75.7623 }
+                    : { lat: 30.9010, lon: 75.8573 }; // Ludhiana, Punjab
+                window.userLocation = userLocation;
+
                 if (farmerLocation && currentUser) {
-                    farmerLocation.textContent = `${currentUser.district}, ${currentUser.state}`;
+                    farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district || 'Ludhiana'}, ${currentUser.state || 'Punjab'}`;
                 }
-                showToast('Using default location. Enable GPS for accurate data.', 'info');
-            }
+                loadWeatherData(userLocation.lat, userLocation.lon);
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
         );
     } else {
-        userLocation = { lat: 28.6139, lon: 77.2090 };
+        userLocation = { lat: 30.9010, lon: 75.8573 };
+        window.userLocation = userLocation;
+        if (farmerLocation && currentUser) {
+            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+        }
         loadWeatherData(userLocation.lat, userLocation.lon);
-        showToast('Location services not available', 'info');
     }
     
     loadMarketData();
