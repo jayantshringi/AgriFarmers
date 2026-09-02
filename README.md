@@ -5,7 +5,7 @@
 [![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-0A66C2?style=flat&logo=githubpages&logoColor=white)](https://jayantshringi.github.io/AgriFarmers-SIH-2025)
 
@@ -82,7 +82,7 @@ AgriFarmers/
 ├── styles.css                 # Custom CSS overrides and animation styling
 ├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.4)
 ├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
-├── package.json               # Node.js manifest & dependencies (`mysql2`)
+├── package.json               # Node.js manifest & dependencies (`@supabase/supabase-js`)
 ├── js/
 │   ├── app-config.js          # Runtime configuration (API base URL for cross-origin setups)
 │   ├── auth.js                # Auth service layer (OTP send/verify, user profile CRUD)

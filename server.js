@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const mysql = require('mysql2/promise');
+const { createClient } = require('@supabase/supabase-js');
 
 loadDotEnv(path.join(__dirname, '.env'));
 
@@ -60,47 +60,32 @@ function loadDotEnv(envPath) {
     });
 }
 
-// ─── MySQL Database ───────────────────────────────────────────────────────────
+// ─── Supabase Database ─────────────────────────────────────────────────────────
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
 
 let db = null;
 
-async function createDbPool() {
-    // Support both individual vars and a DATABASE_URL (for Railway/Render)
-    if (process.env.DATABASE_URL) {
-        return mysql.createPool(process.env.DATABASE_URL + '?waitForConnections=true&connectionLimit=5');
-    }
-
-    return mysql.createPool({
-        host:            process.env.DB_HOST     || 'localhost',
-        port:            Number(process.env.DB_PORT || 3306),
-        user:            process.env.DB_USER     || 'root',
-        password:        process.env.DB_PASSWORD || '',
-        database:        process.env.DB_NAME     || 'agrifarmers_db',
-        waitForConnections: true,
-        connectionLimit: 5
-    });
-}
-
 async function initDb() {
     try {
-        db = await createDbPool();
+        if (!SUPABASE_URL || !SUPABASE_KEY) {
+            console.warn('⚠️ SUPABASE_URL or SUPABASE_KEY missing in .env. Running without database.');
+            db = null;
+            return;
+        }
 
-        await db.execute(`
-            CREATE TABLE IF NOT EXISTS users (
-                id         INT AUTO_INCREMENT PRIMARY KEY,
-                mobile     VARCHAR(10)  NOT NULL UNIQUE,
-                uid        VARCHAR(50)  NOT NULL UNIQUE,
-                name       VARCHAR(100) NOT NULL,
-                state      VARCHAR(100),
-                district   VARCHAR(100),
-                location   JSON,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                last_login DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
+        db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: false }
+        });
 
-        console.log('Database connected and users table ready.');
+        // Test database connectivity
+        const { error } = await db.from('users').select('id').limit(1);
+        if (error) {
+            throw error;
+        }
+
+        console.log('✅ Supabase connected and users table ready.');
     } catch (err) {
         console.error('Database connection failed:', err.message);
         console.warn('Running WITHOUT database. User profiles will not be persisted.');
@@ -374,7 +359,23 @@ function assertDbAvailable() {
     }
 }
 
-/** POST /api/users — create a new user */
+/** Convert a Supabase DB row to a clean profile object for the frontend */
+function rowToProfile(row) {
+    if (!row) return null;
+    return {
+        uid:       row.uid,
+        mobile:    row.mobile,
+        name:      row.name,
+        state:     row.state     || '',
+        district:  row.district  || '',
+        location:  row.location  || null,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
+        lastLogin: row.last_login ? new Date(row.last_login).toISOString()  : null
+    };
+}
+
+/** POST /api/users — create or update user profile */
 async function handleCreateUser(req, res) {
     assertDbAvailable();
 
@@ -390,21 +391,28 @@ async function handleCreateUser(req, res) {
 
     const safeUid = uid || `user_${mobile}`;
 
-    const [result] = await db.execute(
-        `INSERT INTO users (mobile, uid, name, state, district, location)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-           name     = VALUES(name),
-           state    = VALUES(state),
-           district = VALUES(district),
-           location = VALUES(location),
-           updated_at = CURRENT_TIMESTAMP`,
-        [mobile, safeUid, name.trim(), state || null, district || null,
-         location ? JSON.stringify(location) : null]
-    );
+    const { data, error } = await db
+        .from('users')
+        .upsert(
+            {
+                mobile,
+                uid: safeUid,
+                name: name.trim(),
+                state: state || null,
+                district: district || null,
+                location: location || null
+            },
+            { onConflict: 'mobile' }
+        )
+        .select()
+        .single();
 
-    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
-    sendJson(req, res, 201, { user: rowToProfile(rows[0]) });
+    if (error) {
+        console.error('Supabase createUser error:', error);
+        throw createHttpError(500, 'Failed to save user profile: ' + error.message);
+    }
+
+    sendJson(req, res, 201, { user: rowToProfile(data) });
 }
 
 /** GET /api/users/:mobile — fetch user profile */
@@ -415,13 +423,22 @@ async function handleGetUser(req, res, mobile) {
         throw createHttpError(400, 'Invalid mobile number.');
     }
 
-    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
+    const { data, error } = await db
+        .from('users')
+        .select('*')
+        .eq('mobile', mobile)
+        .maybeSingle();
 
-    if (!rows.length) {
+    if (error) {
+        console.error('Supabase getUser error:', error);
+        throw createHttpError(500, 'Failed to query database: ' + error.message);
+    }
+
+    if (!data) {
         throw createHttpError(404, 'User not found.');
     }
 
-    sendJson(req, res, 200, { user: rowToProfile(rows[0]) });
+    sendJson(req, res, 200, { user: rowToProfile(data) });
 }
 
 /** PUT /api/users/:mobile/login — update last_login timestamp */
@@ -432,33 +449,23 @@ async function handleUpdateLogin(req, res, mobile) {
         throw createHttpError(400, 'Invalid mobile number.');
     }
 
-    const [result] = await db.execute(
-        'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE mobile = ?',
-        [mobile]
-    );
+    const { data, error } = await db
+        .from('users')
+        .update({ last_login: new Date().toISOString() })
+        .eq('mobile', mobile)
+        .select()
+        .maybeSingle();
 
-    if (result.affectedRows === 0) {
+    if (error) {
+        console.error('Supabase updateLogin error:', error);
+        throw createHttpError(500, 'Failed to update login timestamp: ' + error.message);
+    }
+
+    if (!data) {
         throw createHttpError(404, 'User not found.');
     }
 
-    const [rows] = await db.execute('SELECT * FROM users WHERE mobile = ?', [mobile]);
-    sendJson(req, res, 200, { user: rowToProfile(rows[0]) });
-}
-
-/** Convert a DB row to a clean profile object for the frontend */
-function rowToProfile(row) {
-    if (!row) return null;
-    return {
-        uid:       row.uid,
-        mobile:    row.mobile,
-        name:      row.name,
-        state:     row.state     || '',
-        district:  row.district  || '',
-        location:  row.location  || null,
-        createdAt: row.created_at ? new Date(row.created_at).toISOString() : null,
-        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null,
-        lastLogin: row.last_login ? new Date(row.last_login).toISOString()  : null
-    };
+    sendJson(req, res, 200, { user: rowToProfile(data) });
 }
 
 // ─── Static file server ───────────────────────────────────────────────────────
