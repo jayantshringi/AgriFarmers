@@ -68,7 +68,7 @@ async function handleSignUp() {
     if (btn) { btn.disabled = true; btn.textContent = 'Sending OTP...'; }
 
     // Store signup data so auth.js can save it locally after OTP is verified
-    window._setPendingSignup({ name, mobile, state, district, location: null });
+    window._setPendingSignup({ name, mobile, state, district, location: window.signupDetectedLocation || null });
 
     const phoneNumber = `+91${mobile}`;
     setOtpPhoneNumber(phoneNumber);

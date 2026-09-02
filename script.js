@@ -295,6 +295,74 @@ function initApp() {
                     'Jhunjhunu', 'Jodhpur', 'Karauli', 'Khairthal-Tijara', 'Kota', 
                     'Kotputli-Behror', 'Nagaur', 'Pali', 'Phalodi', 'Pratapgarh', 
                     'Rajsamand', 'Sawai Madhopur', 'Sikar', 'Sirohi', 'Tonk', 'Udaipur'
+                ],
+                'Uttar Pradesh': [
+                    'Agra', 'Aligarh', 'Ambedkar Nagar', 'Amethi', 'Amroha', 'Auraiya', 'Ayodhya',
+                    'Azamgarh', 'Baghpat', 'Bahraich', 'Ballia', 'Balrampur', 'Banda', 'Barabanki',
+                    'Bareilly', 'Basti', 'Bhadohi', 'Bijnor', 'Budaun', 'Bulandshahr', 'Chandauli',
+                    'Chitrakoot', 'Deoria', 'Etah', 'Etawah', 'Farrukhabad', 'Fatehpur', 'Firozabad',
+                    'Gautam Buddha Nagar (Noida)', 'Ghaziabad', 'Ghazipur', 'Gonda', 'Gorakhpur',
+                    'Hamirpur', 'Hapur', 'Hardoi', 'Hathras', 'Jalaun', 'Jaunpur', 'Jhansi',
+                    'Kannauj', 'Kanpur Dehat', 'Kanpur Nagar', 'Kasganj', 'Kaushambi', 'Kushinagar',
+                    'Lakhimpur Kheri', 'Lalitpur', 'Lucknow', 'Maharajganj', 'Mahoba', 'Mainpuri',
+                    'Mathura', 'Mau', 'Meerut', 'Mirzapur', 'Moradabad', 'Muzaffarnagar', 'Pilibhit',
+                    'Pratapgarh', 'Prayagraj (Allahabad)', 'Raebareli', 'Rampur', 'Saharanpur',
+                    'Sambhal', 'Sant Kabir Nagar', 'Shahjahanpur', 'Shamli', 'Shravasti', 'Siddharthnagar',
+                    'Sitapur', 'Sonbhadra', 'Sultanpur', 'Unnao', 'Varanasi'
+                ],
+                'Madhya Pradesh': [
+                    'Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas', 'Satna',
+                    'Ratlam', 'Rewa', 'Murwara (Katni)', 'Singrauli', 'Burhanpur', 'Khandwa', 'Morena',
+                    'Bhind', 'Chhindwara', 'Guna', 'Shivpuri', 'Vidisha', 'Chhatarpur', 'Damoh',
+                    'Mandsaur', 'Khargone', 'Neemuch', 'Pithampur', 'Hoshangabad', 'Itarsi', 'Sehore'
+                ],
+                Maharashtra: [
+                    'Ahmednagar', 'Akola', 'Amravati', 'Aurangabad (Chhatrapati Sambhaji Nagar)', 'Beed',
+                    'Bhandara', 'Buldhana', 'Chandrapur', 'Dhule', 'Gadchiroli', 'Gondia', 'Hingoli',
+                    'Jalgaon', 'Jalna', 'Kolhapur', 'Latur', 'Mumbai City', 'Mumbai Suburban', 'Nagpur',
+                    'Nanded', 'Nandurbar', 'Nashik', 'Osmanabad (Dharashiv)', 'Palghar', 'Parbhani',
+                    'Pune', 'Raigad', 'Ratnagiri', 'Sangli', 'Satara', 'Sindhudurg', 'Solapur', 'Thane',
+                    'Wardha', 'Washim', 'Yavatmal'
+                ],
+                Gujarat: [
+                    'Ahmedabad', 'Amreli', 'Anand', 'Aravalli', 'Banaskantha', 'Bharuch', 'Bhavnagar',
+                    'Botad', 'Chhota Udaipur', 'Dahod', 'Dang', 'Devbhoomi Dwarka', 'Gandhinagar',
+                    'Gir Somnath', 'Jamnagar', 'Junagadh', 'Kheda', 'Kutch', 'Mahisagar', 'Mehsana',
+                    'Morbi', 'Narmada', 'Navsari', 'Panchmahal', 'Patan', 'Porbandar', 'Rajkot',
+                    'Sabarkantha', 'Surat', 'Surendranagar', 'Tapi', 'Vadodara', 'Valsad'
+                ],
+                Bihar: [
+                    'Araria', 'Arwal', 'Aurangabad', 'Banka', 'Begusarai', 'Bhagalpur', 'Bhojpur',
+                    'Buxar', 'Darbhanga', 'East Champaran', 'Gaya', 'Gopalganj', 'Jamui', 'Jehanabad',
+                    'Kaimur', 'Katihar', 'Khagaria', 'Kishanganj', 'Lakhisarai', 'Madhepura', 'Madhubani',
+                    'Munger', 'Muzaffarpur', 'Nalanda', 'Nawada', 'Patna', 'Purnia', 'Rohtas', 'Saharsa',
+                    'Samastipur', 'Saran', 'Sheikhpura', 'Sheohar', 'Sitamarhi', 'Siwan', 'Supaul',
+                    'Vaishali', 'West Champaran'
+                ],
+                Delhi: [
+                    'Central Delhi', 'East Delhi', 'New Delhi', 'North Delhi', 'North East Delhi',
+                    'North West Delhi', 'Shahdara', 'South Delhi', 'South East Delhi', 'South West Delhi', 'West Delhi'
+                ],
+                Karnataka: [
+                    'Bagalkot', 'Ballari', 'Belagavi', 'Bengaluru Rural', 'Bengaluru Urban', 'Bidar',
+                    'Chamarajanagar', 'Chikkaballapur', 'Chikkamagaluru', 'Chitradurga', 'Dakshina Kannada',
+                    'Davanagere', 'Dharwad', 'Gadag', 'Hassan', 'Haveri', 'Kalaburagi', 'Kodagu',
+                    'Kolar', 'Koppal', 'Mandya', 'Mysuru', 'Raichur', 'Ramanagara', 'Shivamogga',
+                    'Tumakuru', 'Udupi', 'Uttara Kannada', 'Vijayapura', 'Yadgir'
+                ],
+                'Tamil Nadu': [
+                    'Ariyalur', 'Chengalpattu', 'Chennai', 'Coimbatore', 'Cuddalore', 'Dharmapuri',
+                    'Dindigul', 'Erode', 'Kallakurichi', 'Kanchipuram', 'Kanyakumari', 'Karur',
+                    'Krishnagiri', 'Madurai', 'Nagapattinam', 'Namakkal', 'Nilgiris', 'Perambalur',
+                    'Pudukkottai', 'Ramanathapuram', 'Ranipet', 'Salem', 'Sivaganga', 'Tenkasi',
+                    'Thanjavur', 'Theni', 'Thoothukudi', 'Tiruchirappalli', 'Tirunelveli', 'Tirupathur',
+                    'Tiruppur', 'Tiruvallur', 'Tiruvannamalai', 'Tiruvarur', 'Vellore', 'Viluppuram', 'Virudhunagar'
+                ],
+                'West Bengal': [
+                    'Alipurduar', 'Bankura', 'Birbhum', 'Cooch Behar', 'Dakshin Dinajpur', 'Darjeeling',
+                    'Hooghly', 'Howrah', 'Jalpaiguri', 'Jhargram', 'Kalimpong', 'Kolkata', 'Malda',
+                    'Murshidabad', 'Nadia', 'North 24 Parganas', 'Paschim Bardhaman', 'Paschim Medinipur',
+                    'Purba Bardhaman', 'Purba Medinipur', 'Purulia', 'South 24 Parganas', 'Uttar Dinajpur'
                 ]
             };
             
@@ -564,80 +632,223 @@ function updateUserInfo() {
     }
 }
 
-// Get real-time accurate user location
-function getUserLocation() {
+// Helper: Multi-tier high-accuracy reverse geocoding
+async function reverseGeocodeCoords(lat, lon) {
+    const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+    
+    // Tier 1: OpenWeather Geocoding API (Fast & highly accurate for India)
+    try {
+        const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`);
+        if (owRes.ok) {
+            const list = await owRes.json();
+            if (Array.isArray(list) && list.length > 0) {
+                const item = list[0];
+                const city = item.name || '';
+                const state = item.state || '';
+                if (city || state) {
+                    return {
+                        city: city || 'Your Location',
+                        state: state || '',
+                        formatted: state ? `${city}, ${state}` : city,
+                        source: 'OpenWeather'
+                    };
+                }
+            }
+        }
+    } catch (_) {}
+
+    // Tier 2: BigDataCloud Reverse Geocoding Client
+    try {
+        const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+        if (bdcRes.ok) {
+            const geo = await bdcRes.json();
+            const city = geo.locality || geo.city || geo.principalSubdivisionDistrict || '';
+            const state = geo.principalSubdivision || '';
+            if (city || state) {
+                return {
+                    city: city || 'Your Location',
+                    state: state || '',
+                    formatted: state ? `${city}, ${state}` : city,
+                    source: 'BigDataCloud'
+                };
+            }
+        }
+    } catch (_) {}
+
+    // Tier 3: OpenStreetMap Nominatim
+    try {
+        const nomRes = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`, {
+            headers: { 'Accept-Language': 'en' }
+        });
+        if (nomRes.ok) {
+            const data = await nomRes.json();
+            const addr = data.address || {};
+            const city = addr.city || addr.town || addr.district || addr.county || addr.state_district || 'Your Location';
+            const state = addr.state || '';
+            return {
+                city,
+                state,
+                formatted: state ? `${city}, ${state}` : city,
+                source: 'OSM'
+            };
+        }
+    } catch (_) {}
+
+    return null;
+}
+
+// Auto-detect GPS location during Signup
+async function autoDetectSignupLocation() {
+    const btn = document.getElementById('autoDetectLocBtn');
+    const stateSelect = document.getElementById('signUpState');
+    const districtSelect = document.getElementById('signUpDistrict');
+
+    if (!navigator.geolocation) {
+        showToast('Geolocation is not supported by your browser', 'error');
+        return;
+    }
+
+    if (btn) btn.textContent = 'Detecting GPS Location...';
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            window.signupDetectedLocation = { lat, lon };
+
+            const geo = await reverseGeocodeCoords(lat, lon);
+            if (btn) btn.textContent = 'Auto-Detect State & District with GPS';
+
+            if (geo) {
+                // Try selecting state in dropdown
+                if (stateSelect && geo.state) {
+                    let matchedState = Array.from(stateSelect.options).find(o => 
+                        o.value.toLowerCase() === geo.state.toLowerCase() || geo.state.toLowerCase().includes(o.value.toLowerCase())
+                    );
+                    if (matchedState) {
+                        stateSelect.value = matchedState.value;
+                        stateSelect.dispatchEvent(new Event('change'));
+                    } else {
+                        // Add state option if not present
+                        const opt = document.createElement('option');
+                        opt.value = geo.state;
+                        opt.textContent = geo.state;
+                        stateSelect.appendChild(opt);
+                        stateSelect.value = geo.state;
+                        stateSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+
+                // Add or select district
+                if (districtSelect && geo.city) {
+                    districtSelect.disabled = false;
+                    let matchedDistrict = Array.from(districtSelect.options).find(o => 
+                        o.value.toLowerCase() === geo.city.toLowerCase()
+                    );
+                    if (matchedDistrict) {
+                        districtSelect.value = matchedDistrict.value;
+                    } else {
+                        const opt = document.createElement('option');
+                        opt.value = geo.city;
+                        opt.textContent = geo.city;
+                        districtSelect.appendChild(opt);
+                        districtSelect.value = geo.city;
+                    }
+                }
+
+                showToast(`📍 Location detected: ${geo.formatted}`, 'success');
+            } else {
+                showToast(`📍 Coordinates: ${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`, 'info');
+            }
+        },
+        (err) => {
+            if (btn) btn.textContent = 'Auto-Detect State & District with GPS';
+            console.warn('Signup geolocation error:', err.message);
+            showToast('Please allow location permission in your browser', 'error');
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+// Get real-time accurate user location with high precision GPS
+function getUserLocation(forceRefresh = false) {
     const farmerLocation = document.getElementById('farmerLocation');
 
-    // Immediate fallback display while fetching GPS
-    if (currentUser && currentUser.district && currentUser.state) {
-        if (farmerLocation) {
-            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
-        }
+    if (farmerLocation) {
+        farmerLocation.innerHTML = `<i class="fas fa-spinner fa-spin text-xs mr-1 text-yellow-300"></i>Detecting live GPS...`;
     }
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
-                userLocation = {
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                window.userLocation = userLocation;
-                
-                // Real-time reverse geocoding to get exact district / city
-                try {
-                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${userLocation.lat}&longitude=${userLocation.lon}&localityLanguage=en`);
-                    if (res.ok) {
-                        const geo = await res.json();
-                        const city = geo.locality || geo.city || geo.principalSubdivisionDistrict || currentUser?.district || 'Your Location';
-                        const state = geo.principalSubdivision || currentUser?.state || '';
-                        const formattedLoc = state ? `${city}, ${state}` : city;
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const accuracy = position.coords.accuracy;
 
-                        if (farmerLocation) {
-                            farmerLocation.innerHTML = `<i class="fas fa-location-crosshairs text-xs mr-1 text-green-200"></i>${formattedLoc} <span class="text-[10px] opacity-75 font-mono">(${userLocation.lat.toFixed(2)}°N, ${userLocation.lon.toFixed(2)}°E)</span>`;
-                        }
-                        if (currentUser) {
-                            currentUser.district = city;
-                            currentUser.state = state || currentUser.state;
-                            currentUser.locationName = formattedLoc;
-                        }
-                    } else if (farmerLocation && currentUser) {
-                        farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
-                    }
-                } catch (_) {
-                    if (farmerLocation && currentUser) {
-                        farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
-                    }
+                userLocation = { lat, lon, accuracy };
+                window.userLocation = userLocation;
+
+                // High-precision reverse geocoding
+                const geo = await reverseGeocodeCoords(lat, lon);
+                const city = geo?.city || currentUser?.district || 'Your Location';
+                const state = geo?.state || currentUser?.state || '';
+                const formattedLoc = geo?.formatted || (state ? `${city}, ${state}` : city);
+
+                if (farmerLocation) {
+                    farmerLocation.innerHTML = `<i class="fas fa-location-crosshairs text-xs mr-1 text-yellow-300"></i><span class="font-bold">${formattedLoc}</span> <span class="text-[10px] opacity-80 font-mono">(${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)</span>`;
                 }
 
                 if (currentUser) {
+                    currentUser.district = city;
+                    if (state) currentUser.state = state;
+                    currentUser.locationName = formattedLoc;
                     currentUser.location = userLocation;
                     localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
                 }
-                
-                loadWeatherData(userLocation.lat, userLocation.lon);
+
+                if (forceRefresh) {
+                    showToast(`📍 Live Location: ${formattedLoc} (Accurate to ±${Math.round(accuracy)}m)`, 'success');
+                }
+
+                // Load weather and precision agriculture data with exact GPS coordinates
+                loadWeatherData(lat, lon);
             },
             (error) => {
                 console.warn('Geolocation warning / permission denied:', error.message);
-                // Use default location based on user profile or Punjab center
+                
+                // Fallback location based on user profile or regional default
+                const fallbackCity = currentUser?.district || 'Ludhiana';
+                const fallbackState = currentUser?.state || 'Punjab';
+                
                 userLocation = (currentUser && currentUser.state === 'Haryana') ? { lat: 29.6857, lon: 76.9905 }
                     : (currentUser && currentUser.state === 'Rajasthan') ? { lat: 26.8124, lon: 75.7623 }
-                    : { lat: 30.9010, lon: 75.8573 }; // Ludhiana, Punjab
+                    : (currentUser && currentUser.state === 'Uttar Pradesh') ? { lat: 26.8467, lon: 80.9462 }
+                    : (currentUser && currentUser.state === 'Maharashtra') ? { lat: 19.7515, lon: 75.7139 }
+                    : { lat: 30.9010, lon: 75.8573 }; // Default
+                
                 window.userLocation = userLocation;
 
-                if (farmerLocation && currentUser) {
-                    farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district || 'Ludhiana'}, ${currentUser.state || 'Punjab'}`;
+                if (farmerLocation) {
+                    farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-yellow-300"></i>${fallbackCity}, ${fallbackState}`;
                 }
+
+                if (forceRefresh) {
+                    showToast('Location permission denied. Click allow in browser address bar for live GPS.', 'error');
+                }
+
                 loadWeatherData(userLocation.lat, userLocation.lon);
             },
-            { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+            {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: forceRefresh ? 0 : 30000
+            }
         );
     } else {
         userLocation = { lat: 30.9010, lon: 75.8573 };
         window.userLocation = userLocation;
-        if (farmerLocation && currentUser) {
-            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
+        if (farmerLocation) {
+            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-yellow-300"></i>${currentUser?.district || 'Ludhiana'}, ${currentUser?.state || 'Punjab'}`;
         }
         loadWeatherData(userLocation.lat, userLocation.lon);
     }
@@ -1094,6 +1305,8 @@ window.handleLogout = handleLogout;
 window.changeLanguage = changeLanguage;
 window.updateUserInfo = updateUserInfo;
 window.getUserLocation = getUserLocation;
+window.autoDetectSignupLocation = autoDetectSignupLocation;
+window.loadDashboardData = loadDashboardData;
 
 // Close modals when clicking outside
 document.addEventListener('click', function(event) {
