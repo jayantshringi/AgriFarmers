@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v5.6
-const CACHE_NAME = 'agrifarmers-v5.6';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v5.6';
+// AgriFarmers Service Worker v5.7
+const CACHE_NAME = 'agrifarmers-v5.7';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v5.7';
 
 // URLs for caching
 const STATIC_ASSETS = [

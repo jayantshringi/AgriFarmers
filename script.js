@@ -870,34 +870,56 @@ function loadDashboardData() {
 }
 
 // Load weather data using REAL API
-async function loadWeatherData(lat, lon) {
+async function loadWeatherData(lat, lon, customLocationName = null) {
     try {
-        // Real OpenWeatherMap API key
         const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
         
+        // 1. Fetch current weather
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
         
+        // 2. Fetch 5-day agricultural forecast
+        let forecastData = null;
+        try {
+            const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+            if (fRes.ok) forecastData = await fRes.json();
+        } catch (_) {}
+
         if (response.ok) {
             const weatherData = await response.json();
-            updateWeatherCard(weatherData);
-            updateWeatherModal(weatherData);
             
-            // Update farming tips based on weather
+            // Determine accurate location display name
+            const locName = customLocationName || 
+                currentUser?.locationName || 
+                (currentUser?.district ? (currentUser.state ? `${currentUser.district}, ${currentUser.state}` : currentUser.district) : '') ||
+                weatherData.name || 
+                'Your Location';
+                
+            weatherData._locationName = locName;
+            weatherData._lat = lat;
+            weatherData._lon = lon;
+            
+            window.latestWeatherData = weatherData;
+            window.latestForecastData = forecastData;
+
+            updateWeatherCard(weatherData);
+            updateWeatherModal(weatherData, forecastData);
             updateFarmingTips(weatherData);
         } else {
             throw new Error('Weather API failed');
         }
     } catch (error) {
         console.error('Error loading weather data:', error);
-        showToast('Unable to fetch live weather. Using sample data.', 'info');
         
         // Fallback to realistic sample data based on location
+        const locName = customLocationName || currentUser?.locationName || currentUser?.district || 'Your Location';
         const sampleWeather = {
             main: {
                 temp: getRandomTemp(lat, lon),
                 feels_like: getRandomTemp(lat, lon) + 2,
                 humidity: Math.floor(Math.random() * 30) + 50,
-                pressure: 1013
+                pressure: 1013,
+                temp_min: getRandomTemp(lat, lon) - 2,
+                temp_max: getRandomTemp(lat, lon) + 3
             },
             weather: [{ 
                 description: getWeatherDescription(lat, lon),
@@ -908,18 +930,59 @@ async function loadWeatherData(lat, lon) {
                 sunrise: Math.floor(Date.now() / 1000) - 21600,
                 sunset: Math.floor(Date.now() / 1000) + 21600
             },
-            name: currentUser?.district || 'Your Location'
+            name: locName,
+            _locationName: locName,
+            _lat: lat,
+            _lon: lon
         };
         
         updateWeatherCard(sampleWeather);
-        updateWeatherModal(sampleWeather);
+        updateWeatherModal(sampleWeather, null);
         updateFarmingTips(sampleWeather);
+    }
+}
+
+// Search weather for any city or mandi
+async function searchCustomCityWeather() {
+    const input = document.getElementById('weatherCitySearchInput');
+    const city = input?.value?.trim();
+    if (!city) {
+        showToast('Please enter a city or district name', 'error');
+        return;
+    }
+
+    try {
+        const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},IN&limit=1&appid=${apiKey}`);
+        if (geoRes.ok) {
+            const list = await geoRes.json();
+            if (list.length > 0) {
+                const item = list[0];
+                const locDisplayName = item.state ? `${item.name}, ${item.state}` : item.name;
+                await loadWeatherData(item.lat, item.lon, locDisplayName);
+                showToast(`📍 Loaded weather for ${locDisplayName}`, 'success');
+                return;
+            }
+        }
+        
+        // Fallback search
+        const directRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`);
+        if (directRes.ok) {
+            const data = await directRes.json();
+            await loadWeatherData(data.coord.lat, data.coord.lon, data.name);
+            showToast(`📍 Loaded weather for ${data.name}`, 'success');
+            return;
+        }
+
+        showToast('Could not find location. Please check spelling.', 'error');
+    } catch (e) {
+        console.error('Search weather error:', e);
+        showToast('Failed to fetch weather for this city', 'error');
     }
 }
 
 // Helper functions for realistic fallback data
 function getRandomTemp(lat, lon) {
-    // Generate temperatures based on approximate latitude
     if (lat > 30) return Math.floor(Math.random() * 10) + 15;
     if (lat > 20) return Math.floor(Math.random() * 15) + 20;
     return Math.floor(Math.random() * 10) + 25;
@@ -950,109 +1013,237 @@ function updateFarmingTips(weatherData) {
     let tip = '';
     
     if (condition === 'Rain' || condition === 'Thunderstorm') {
-        tip = 'Rain expected. Good time for irrigation. Avoid chemical spraying today.';
+        tip = '🌧️ Rain expected. Good time for irrigation. Avoid chemical spraying today.';
     } else if (temp > 30) {
-        tip = 'Hot day ahead. Water crops in early morning or late evening to prevent evaporation.';
+        tip = '☀️ Hot day ahead. Water crops in early morning or late evening to prevent high evaporation.';
     } else if (temp < 15) {
-        tip = 'Cool weather. Ideal for sowing winter crops. Protect sensitive plants from cold.';
+        tip = '❄️ Cool weather. Ideal for winter rabi crops. Protect delicate seedlings from cold night frost.';
     } else if (humidity > 80) {
-        tip = 'High humidity. Monitor for fungal diseases. Good for leafy vegetables.';
+        tip = '💧 High humidity. Monitor for fungal leaf blights. Ensure adequate field ventilation.';
     } else {
-        tip = 'Good weather for farming activities. Ideal for irrigation and fertilization.';
+        tip = '🌱 Favorable weather for farming activities. Ideal for soil preparation, irrigation and fertilization.';
     }
     
     tipsElement.textContent = tip;
 }
 
-// Update weather card
+// Update weather card on dashboard
 function updateWeatherCard(weatherData) {
     const content = document.getElementById('weatherCardContent');
     if (!content) return;
     
     const temp = Math.round(weatherData.main.temp);
     const condition = weatherData.weather[0].main;
+    const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
     
-    let icon = 'fa-cloud';
-    if (condition.includes('Clear')) icon = 'fa-sun';
-    if (condition.includes('Rain')) icon = 'fa-cloud-rain';
-    if (condition.includes('Snow')) icon = 'fa-snowflake';
-    if (condition.includes('Mist') || condition.includes('Fog')) icon = 'fa-smog';
-    if (condition.includes('Thunderstorm')) icon = 'fa-bolt';
+    let icon = 'fa-cloud text-blue-500';
+    if (condition.includes('Clear')) icon = 'fa-sun text-amber-500';
+    else if (condition.includes('Rain')) icon = 'fa-cloud-showers-heavy text-blue-500';
+    else if (condition.includes('Snow')) icon = 'fa-snowflake text-cyan-400';
+    else if (condition.includes('Mist') || condition.includes('Fog') || condition.includes('Haze')) icon = 'fa-smog text-slate-400';
+    else if (condition.includes('Thunderstorm')) icon = 'fa-bolt text-yellow-500';
+    else icon = 'fa-cloud-sun text-blue-500';
     
     content.innerHTML = `
         <div class="flex items-center justify-between">
             <div>
-                <i class="fas ${icon} text-4xl text-blue-500"></i>
-                <p class="text-3xl font-bold mt-2">${temp}°C</p>
-                <p class="text-gray-600 capitalize">${weatherData.weather[0].description}</p>
+                <i class="fas ${icon} text-4xl mb-2"></i>
+                <p class="text-3xl font-extrabold text-gray-900">${temp}°C</p>
+                <p class="text-gray-600 capitalize text-sm font-medium">${weatherData.weather[0].description}</p>
+                <p class="text-xs text-green-700 font-bold mt-1.5 flex items-center gap-1">
+                    <i class="fas fa-location-crosshairs text-green-600"></i>
+                    <span class="truncate max-w-[150px]">${locName}</span>
+                </p>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-gray-600">Humidity</p>
-                <p class="font-bold">${weatherData.main.humidity}%</p>
-                <p class="text-sm text-gray-600 mt-2">Wind</p>
-                <p class="font-bold">${weatherData.wind.speed} km/h</p>
+            <div class="text-right space-y-1">
+                <div class="bg-blue-50 px-2.5 py-1 rounded-lg">
+                    <p class="text-[10px] text-blue-700 font-medium uppercase">Humidity</p>
+                    <p class="font-bold text-sm text-blue-900">${weatherData.main.humidity}%</p>
+                </div>
+                <div class="bg-emerald-50 px-2.5 py-1 rounded-lg">
+                    <p class="text-[10px] text-emerald-700 font-medium uppercase">Wind</p>
+                    <p class="font-bold text-sm text-emerald-900">${weatherData.wind.speed} km/h</p>
+                </div>
             </div>
         </div>
     `;
 }
 
-// Update weather modal
-function updateWeatherModal(weatherData) {
+// Update weather modal with rich details & 5-day forecast
+function updateWeatherModal(weatherData, forecastData = null) {
     const content = document.getElementById('weatherModalContent');
     if (!content) return;
     
     const temp = Math.round(weatherData.main.temp);
-    const sunrise = new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    const sunset = new Date(weatherData.sys.sunset * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const feelsLike = Math.round(weatherData.main.feels_like);
+    const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
+    const lat = weatherData._lat || window.userLocation?.lat || 0;
+    const lon = weatherData._lon || window.userLocation?.lon || 0;
     
-    let icon = 'fa-cloud-sun';
+    const sunrise = weatherData.sys?.sunrise ? new Date(weatherData.sys.sunrise * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '06:00 AM';
+    const sunset = weatherData.sys?.sunset ? new Date(weatherData.sys.sunset * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '06:30 PM';
+    
+    let icon = 'fa-cloud-sun text-blue-500';
     const condition = weatherData.weather[0].main;
-    if (condition.includes('Clear')) icon = 'fa-sun';
-    if (condition.includes('Rain')) icon = 'fa-cloud-rain';
-    if (condition.includes('Snow')) icon = 'fa-snowflake';
-    if (condition.includes('Thunderstorm')) icon = 'fa-bolt';
+    if (condition.includes('Clear')) icon = 'fa-sun text-amber-500';
+    else if (condition.includes('Rain')) icon = 'fa-cloud-showers-heavy text-blue-500';
+    else if (condition.includes('Snow')) icon = 'fa-snowflake text-cyan-400';
+    else if (condition.includes('Thunderstorm')) icon = 'fa-bolt text-yellow-500';
+    else if (condition.includes('Mist') || condition.includes('Fog') || condition.includes('Haze')) icon = 'fa-smog text-slate-400';
     
+    // Process 5-day forecast (1 entry per day)
+    let forecastCardsHtml = '';
+    if (forecastData && Array.isArray(forecastData.list)) {
+        const dailyMap = new Map();
+        forecastData.list.forEach(item => {
+            const dateStr = item.dt_txt.split(' ')[0];
+            if (!dailyMap.has(dateStr) && dailyMap.size < 5) {
+                dailyMap.set(dateStr, item);
+            }
+        });
+
+        forecastCardsHtml = `
+            <div class="mt-6 pt-5 border-t border-gray-100">
+                <h4 class="font-bold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
+                    <i class="fas fa-calendar-week text-blue-600"></i>
+                    <span>5-Day Agricultural Weather Forecast</span>
+                </h4>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    ${Array.from(dailyMap.values()).map(item => {
+                        const d = new Date(item.dt * 1000);
+                        const dayName = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        const fTemp = Math.round(item.main.temp);
+                        const fCond = item.weather[0].main;
+                        let fIcon = 'fa-cloud text-gray-400';
+                        if (fCond.includes('Clear')) fIcon = 'fa-sun text-amber-500';
+                        else if (fCond.includes('Rain')) fIcon = 'fa-cloud-rain text-blue-500';
+                        else if (fCond.includes('Clouds')) fIcon = 'fa-cloud text-blue-400';
+                        const pop = Math.round((item.pop || 0) * 100);
+
+                        return `
+                            <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-center hover:bg-blue-50/50 transition-colors">
+                                <p class="text-xs font-bold text-gray-700">${dayName}</p>
+                                <i class="fas ${fIcon} text-2xl my-2"></i>
+                                <p class="text-sm font-extrabold text-gray-900">${fTemp}°C</p>
+                                <p class="text-[10px] text-gray-500 capitalize truncate">${item.weather[0].description}</p>
+                                ${pop > 0 ? `<p class="text-[10px] text-blue-600 font-semibold mt-1"><i class="fas fa-droplet text-[9px]"></i> ${pop}% rain</p>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
     content.innerHTML = `
-        <div class="text-center mb-6">
-            <i class="fas ${icon} text-6xl text-blue-500 mb-4"></i>
-            <h4 class="text-2xl font-bold">${temp}°C</h4>
-            <p class="text-gray-600 capitalize">${weatherData.weather[0].description}</p>
-            <p class="text-sm text-gray-500 mt-2">${weatherData.name}</p>
+        <!-- Live Location Banner -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-4 text-white mb-5 shadow-sm">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-wider">Live Geo-Location</span>
+                        ${lat && lon ? `<span class="text-[11px] opacity-85 font-mono">(${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)</span>` : ''}
+                    </div>
+                    <h3 class="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
+                        <i class="fas fa-location-crosshairs text-yellow-300 text-base"></i>
+                        <span>${locName}</span>
+                    </h3>
+                </div>
+                <button onclick="getUserLocation(true)"
+                    class="bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-white/25">
+                    <i class="fas fa-sync-alt text-yellow-300"></i>
+                    <span>Refresh GPS</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick City Search for other farms/mandis -->
+        <div class="flex gap-2 mb-5">
+            <input type="text" id="weatherCitySearchInput" placeholder="Check weather of another city or mandi (e.g. Kota, Ludhiana, Jaipur)"
+                class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" 
+                onkeydown="if(event.key === 'Enter') searchCustomCityWeather()" />
+            <button onclick="searchCustomCityWeather()" 
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                <i class="fas fa-search"></i>
+                <span>Search</span>
+            </button>
+        </div>
+
+        <!-- Current Main Weather Display -->
+        <div class="flex flex-col sm:flex-row items-center justify-between p-4 bg-blue-50/70 rounded-xl border border-blue-100 mb-5">
+            <div class="flex items-center gap-4 mb-3 sm:mb-0">
+                <i class="fas ${icon} text-5xl"></i>
+                <div>
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-4xl font-black text-gray-900">${temp}°C</span>
+                        <span class="text-xs font-semibold text-gray-500">Feels like ${feelsLike}°C</span>
+                    </div>
+                    <p class="text-sm font-semibold text-blue-900 capitalize mt-0.5">${weatherData.weather[0].description}</p>
+                </div>
+            </div>
+            <div class="text-center sm:text-right bg-white px-3 py-2 rounded-lg border border-blue-100 shadow-sm">
+                <p class="text-[10px] font-bold text-gray-500 uppercase">Min / Max Temp</p>
+                <p class="text-sm font-extrabold text-gray-800">${Math.round(weatherData.main.temp_min || temp)}°C / ${Math.round(weatherData.main.temp_max || temp)}°C</p>
+            </div>
         </div>
         
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600">Feels Like</p>
-                <p class="text-lg font-bold">${Math.round(weatherData.main.feels_like)}°C</p>
+        <!-- Detailed Agricultural Weather Parameters -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                <i class="fas fa-droplet text-blue-500 text-base mb-1"></i>
+                <p class="text-[10px] uppercase font-bold text-gray-500">Relative Humidity</p>
+                <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.main.humidity}%</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600">Humidity</p>
-                <p class="text-lg font-bold">${weatherData.main.humidity}%</p>
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                <i class="fas fa-wind text-teal-500 text-base mb-1"></i>
+                <p class="text-[10px] uppercase font-bold text-gray-500">Wind Velocity</p>
+                <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.wind.speed} km/h</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600">Wind Speed</p>
-                <p class="text-lg font-bold">${weatherData.wind.speed} km/h</p>
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                <i class="fas fa-gauge text-indigo-500 text-base mb-1"></i>
+                <p class="text-[10px] uppercase font-bold text-gray-500">Pressure</p>
+                <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.main.pressure} hPa</p>
             </div>
-            <div class="bg-gray-50 p-4 rounded-lg">
-                <p class="text-sm text-gray-600">Pressure</p>
-                <p class="text-lg font-bold">${weatherData.main.pressure} hPa</p>
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+                <i class="fas fa-eye text-emerald-500 text-base mb-1"></i>
+                <p class="text-[10px] uppercase font-bold text-gray-500">Visibility</p>
+                <p class="text-base font-black text-gray-900 mt-0.5">${(weatherData.visibility ? (weatherData.visibility / 1000).toFixed(1) : '10')} km</p>
             </div>
         </div>
         
-        <div class="mt-6 pt-6 border-t">
-            <div class="flex justify-between">
-                <div class="text-center">
-                    <i class="fas fa-sunrise text-yellow-500 text-2xl"></i>
-                    <p class="text-sm text-gray-600 mt-2">Sunrise</p>
-                    <p class="font-bold">${sunrise}</p>
+        <!-- Sun & Farming Advisory Details -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div class="flex items-center justify-around bg-gradient-to-r from-amber-50 to-orange-50 p-3 rounded-xl border border-amber-200">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-sun text-amber-500 text-xl"></i>
+                    <div>
+                        <p class="text-[10px] font-bold text-amber-800 uppercase">Sunrise</p>
+                        <p class="font-black text-xs text-gray-900">${sunrise}</p>
+                    </div>
                 </div>
-                <div class="text-center">
-                    <i class="fas fa-sunset text-orange-500 text-2xl"></i>
-                    <p class="text-sm text-gray-600 mt-2">Sunset</p>
-                    <p class="font-bold">${sunset}</p>
+                <div class="h-8 w-px bg-amber-200"></div>
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-moon text-orange-500 text-xl"></i>
+                    <div>
+                        <p class="text-[10px] font-bold text-orange-800 uppercase">Sunset</p>
+                        <p class="font-black text-xs text-gray-900">${sunset}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex items-center gap-2.5">
+                <i class="fas fa-seedling text-emerald-600 text-xl flex-shrink-0"></i>
+                <div>
+                    <p class="text-[10px] font-bold text-emerald-800 uppercase">Spraying Condition</p>
+                    <p class="text-xs font-bold text-emerald-900">
+                        ${weatherData.wind.speed < 15 && !condition.includes('Rain') ? '✅ Ideal for fertilizer & pesticide spraying' : '⚠️ Avoid chemical spraying due to wind/rain'}
+                    </p>
                 </div>
             </div>
         </div>
+
+        <!-- 5-Day Forecast -->
+        ${forecastCardsHtml}
     `;
 }
 
@@ -1193,6 +1384,14 @@ function updateSeedModal(crops) {
 // Modal functions
 function openWeatherModal() {
     document.getElementById('weatherModal').classList.add('active');
+    if (window.latestWeatherData) {
+        updateWeatherModal(window.latestWeatherData, window.latestForecastData);
+    }
+    if (window.userLocation && window.userLocation.lat && window.userLocation.lon) {
+        loadWeatherData(window.userLocation.lat, window.userLocation.lon);
+    } else {
+        getUserLocation();
+    }
 }
 
 function openMarketPricesModal() {
@@ -1307,6 +1506,7 @@ window.updateUserInfo = updateUserInfo;
 window.getUserLocation = getUserLocation;
 window.autoDetectSignupLocation = autoDetectSignupLocation;
 window.loadDashboardData = loadDashboardData;
+window.searchCustomCityWeather = searchCustomCityWeather;
 
 // Close modals when clicking outside
 document.addEventListener('click', function(event) {
