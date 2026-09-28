@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v5.9
-const CACHE_NAME = 'agrifarmers-v5.9';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v5.9';
+// AgriFarmers Service Worker v6.0
+const CACHE_NAME = 'agrifarmers-v6.0';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v6.0';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -22,7 +22,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v5.9...');
+  console.log('[Service Worker] Installing v6.0...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
@@ -39,7 +39,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v5.9...');
+  console.log('[Service Worker] Activating v6.0...');
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
