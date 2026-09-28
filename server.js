@@ -39,57 +39,72 @@ const mimeTypes = {
 function loadDotEnv(envPath) {
     if (!fs.existsSync(envPath)) return;
 
-    const contents = fs.readFileSync(envPath, 'utf8');
-    contents.split(/\r?\n/).forEach(line => {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith('#')) return;
+    try {
+        const contents = fs.readFileSync(envPath, 'utf8');
+        contents.split(/\r?\n/).forEach(line => {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) return;
 
-        const equalsIndex = trimmed.indexOf('=');
-        if (equalsIndex === -1) return;
+            const equalsIndex = trimmed.indexOf('=');
+            if (equalsIndex === -1) return;
 
-        const key = trimmed.slice(0, equalsIndex).trim();
-        let value = trimmed.slice(equalsIndex + 1).trim();
+            const key = trimmed.slice(0, equalsIndex).trim();
+            let value = trimmed.slice(equalsIndex + 1).trim();
 
-        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-        }
+            if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+                value = value.slice(1, -1);
+            }
 
-        if (key && process.env[key] === undefined) {
-            process.env[key] = value;
-        }
-    });
+            if (key && process.env[key] === undefined) {
+                process.env[key] = value;
+            }
+        });
+    } catch (_) {}
 }
 
 // ─── Supabase Database ─────────────────────────────────────────────────────────
 
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-
 let db = null;
 
-async function initDb() {
-    try {
-        if (!SUPABASE_URL || !SUPABASE_KEY) {
-            console.warn('⚠️ SUPABASE_URL or SUPABASE_KEY missing in .env. Running without database.');
-            db = null;
-            return;
-        }
+function getDb() {
+    if (db) return db;
 
-        db = createClient(SUPABASE_URL, SUPABASE_KEY, {
+    const url = process.env.SUPABASE_URL || '';
+    const key = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+
+    if (!url || !key) {
+        return null;
+    }
+
+    try {
+        db = createClient(url, key, {
             auth: { persistSession: false }
         });
+        return db;
+    } catch (err) {
+        console.error('Failed to initialize Supabase client:', err.message);
+        return null;
+    }
+}
 
-        // Test database connectivity
-        const { error } = await db.from('users').select('id').limit(1);
+async function initDb() {
+    const client = getDb();
+    if (!client) {
+        console.warn('⚠️ SUPABASE_URL or SUPABASE_KEY missing. Running without database.');
+        return null;
+    }
+
+    try {
+        const { error } = await client.from('users').select('id').limit(1);
         if (error) {
             throw error;
         }
-
         console.log('✅ Supabase connected and users table ready.');
+        return client;
     } catch (err) {
         console.error('Database connection failed:', err.message);
         console.warn('Running WITHOUT database. User profiles will not be persisted.');
-        db = null;
+        return null;
     }
 }
 
@@ -124,19 +139,37 @@ function setCorsHeaders(req, res) {
     const allowedOrigin = getAllowedOrigin(req);
     if (allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+        if (allowedOrigin !== '*') {
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+        }
     }
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key');
 }
 
 async function readJsonBody(req) {
+    // If request body was already parsed by Vercel Serverless Function runtime
+    if (req.body !== undefined && req.body !== null) {
+        if (typeof req.body === 'object') return req.body;
+        if (typeof req.body === 'string') {
+            const trimmed = req.body.trim();
+            if (!trimmed) return {};
+            try {
+                return JSON.parse(trimmed);
+            } catch (_) {
+                throw createHttpError(400, 'Invalid JSON request body.');
+            }
+        }
+    }
+
+    // Streaming body reading for vanilla Node.js server
     let rawBody = '';
 
     for await (const chunk of req) {
         rawBody += chunk;
-        if (Buffer.byteLength(rawBody) > 4096) {
-            throw createHttpError(413, 'Request body is too large.');
+        if (Buffer.byteLength(rawBody) > 10 * 1024 * 1024) {
+            throw createHttpError(413, 'Request body is too large (max 10MB).');
         }
     }
 
@@ -208,12 +241,54 @@ function compareHash(firstHash, secondHash) {
     return first.length === second.length && crypto.timingSafeEqual(first, second);
 }
 
+/** Creates an HMAC-signed stateless token for serverless multi-instance verification */
+function createSignedOtpToken(phoneNumber, otp, salt, expiresAt) {
+    const payload = `${phoneNumber}|${expiresAt}|${salt}|${hashOtp(phoneNumber, otp, salt)}`;
+    const signature = crypto.createHmac('sha256', OTP_SECRET).update(payload).digest('hex');
+    return Buffer.from(`${payload}|${signature}`).toString('base64url');
+}
+
+/** Verifies an HMAC-signed stateless OTP token */
+function verifySignedOtpToken(token, phoneNumber, otp, now) {
+    try {
+        if (!token) return false;
+        const decoded = Buffer.from(token, 'base64url').toString('utf8');
+        const parts = decoded.split('|');
+        if (parts.length !== 5) return false;
+        const [tokenPhone, tokenExpiresAtStr, tokenSalt, tokenHash, tokenSig] = parts;
+        const tokenExpiresAt = Number(tokenExpiresAtStr);
+
+        const payload = `${tokenPhone}|${tokenExpiresAtStr}|${tokenSalt}|${tokenHash}`;
+        const expectedSig = crypto.createHmac('sha256', OTP_SECRET).update(payload).digest('hex');
+        if (expectedSig !== tokenSig) return false;
+
+        if (tokenPhone !== phoneNumber) return false;
+        if (tokenExpiresAt < now) return false;
+
+        const computedHash = hashOtp(phoneNumber, otp, tokenSalt);
+        return compareHash(tokenHash, computedHash);
+    } catch (_) {
+        return false;
+    }
+}
+
+function getCookie(req, name) {
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) return null;
+    const cookies = cookieHeader.split(';');
+    for (const cookie of cookies) {
+        const [k, v] = cookie.trim().split('=');
+        if (k === name) return decodeURIComponent(v);
+    }
+    return null;
+}
+
 function getClientIp(req) {
     const forwardedFor = req.headers['x-forwarded-for'];
     if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
         return forwardedFor.split(',')[0].trim();
     }
-    return req.socket.remoteAddress || 'unknown';
+    return req.socket?.remoteAddress || 'unknown';
 }
 
 function pruneSendHistory(now) {
@@ -304,18 +379,28 @@ async function handleSendOtp(req, res) {
 
     await sendTextBeeSms(phoneNumber, otp);
 
+    const expiresAt = now + OTP_TTL_SECONDS * 1000;
+    const otpHash = hashOtp(phoneNumber, otp, salt);
+
     otpStore.set(phoneNumber, {
-        hash: hashOtp(phoneNumber, otp, salt),
+        hash: otpHash,
         salt,
-        expiresAt: now + OTP_TTL_SECONDS * 1000,
+        expiresAt,
         attempts: 0,
         sentAt: now
     });
     recordOtpSend(req, phoneNumber, now);
 
+    // Create signed token for stateless serverless environments (Vercel)
+    const signedToken = createSignedOtpToken(phoneNumber, otp, salt, expiresAt);
+
+    // Set cookie for browser clients
+    res.setHeader('Set-Cookie', `agrifarmers_otp=${signedToken}; Path=/api/otp; HttpOnly; SameSite=Lax; Max-Age=${OTP_TTL_SECONDS}`);
+
     sendJson(req, res, 200, {
         sent: true,
-        expiresInSeconds: OTP_TTL_SECONDS
+        expiresInSeconds: OTP_TTL_SECONDS,
+        otpToken: signedToken
     });
 }
 
@@ -323,40 +408,56 @@ async function handleVerifyOtp(req, res) {
     const body = await readJsonBody(req);
     const phoneNumber = validatePhoneNumber(body.phoneNumber);
     const otp = validateOtp(body.otp);
-    const record = otpStore.get(phoneNumber);
     const now = Date.now();
 
-    if (!record) {
+    const record = otpStore.get(phoneNumber);
+    let verified = false;
+
+    if (record) {
+        if (record.expiresAt < now) {
+            otpStore.delete(phoneNumber);
+            throw createHttpError(401, 'OTP expired. Please request a new one.');
+        }
+
+        record.attempts += 1;
+
+        const expectedHash = hashOtp(phoneNumber, otp, record.salt);
+        if (!compareHash(record.hash, expectedHash)) {
+            if (record.attempts >= OTP_MAX_ATTEMPTS) {
+                otpStore.delete(phoneNumber);
+                throw createHttpError(429, 'Too many incorrect attempts. Please request a new OTP.');
+            }
+            throw createHttpError(401, 'Invalid OTP. Please try again.');
+        }
+
+        otpStore.delete(phoneNumber);
+        verified = true;
+    } else {
+        // Fallback for Vercel Serverless Functions / multi-instance scaling
+        const token = body.otpToken || getCookie(req, 'agrifarmers_otp');
+        if (verifySignedOtpToken(token, phoneNumber, otp, now)) {
+            verified = true;
+        }
+    }
+
+    if (!verified) {
         throw createHttpError(401, 'Invalid or expired OTP.');
     }
 
-    if (record.expiresAt < now) {
-        otpStore.delete(phoneNumber);
-        throw createHttpError(401, 'OTP expired. Please request a new one.');
-    }
+    // Clear OTP cookie after successful verification
+    res.setHeader('Set-Cookie', 'agrifarmers_otp=; Path=/api/otp; HttpOnly; SameSite=Lax; Max-Age=0');
 
-    record.attempts += 1;
-
-    const expectedHash = hashOtp(phoneNumber, otp, record.salt);
-    if (!compareHash(record.hash, expectedHash)) {
-        if (record.attempts >= OTP_MAX_ATTEMPTS) {
-            otpStore.delete(phoneNumber);
-            throw createHttpError(429, 'Too many incorrect attempts. Please request a new OTP.');
-        }
-
-        throw createHttpError(401, 'Invalid OTP. Please try again.');
-    }
-
-    otpStore.delete(phoneNumber);
     sendJson(req, res, 200, { verified: true });
 }
 
 // ─── User route handlers ──────────────────────────────────────────────────────
 
 function assertDbAvailable() {
-    if (!db) {
+    const client = getDb();
+    if (!client) {
         throw createHttpError(503, 'Database is unavailable. Please try again later.');
     }
+    return client;
 }
 
 /** Convert a Supabase DB row to a clean profile object for the frontend */
@@ -377,7 +478,7 @@ function rowToProfile(row) {
 
 /** POST /api/users — create or update user profile */
 async function handleCreateUser(req, res) {
-    assertDbAvailable();
+    const client = assertDbAvailable();
 
     const body = await readJsonBody(req);
     const { mobile, uid, name, state, district, location } = body;
@@ -391,7 +492,7 @@ async function handleCreateUser(req, res) {
 
     const safeUid = uid || `user_${mobile}`;
 
-    const { data, error } = await db
+    const { data, error } = await client
         .from('users')
         .upsert(
             {
@@ -417,13 +518,13 @@ async function handleCreateUser(req, res) {
 
 /** GET /api/users/:mobile — fetch user profile */
 async function handleGetUser(req, res, mobile) {
-    assertDbAvailable();
+    const client = assertDbAvailable();
 
     if (!mobile || !/^\d{10}$/.test(mobile)) {
         throw createHttpError(400, 'Invalid mobile number.');
     }
 
-    const { data, error } = await db
+    const { data, error } = await client
         .from('users')
         .select('*')
         .eq('mobile', mobile)
@@ -443,13 +544,13 @@ async function handleGetUser(req, res, mobile) {
 
 /** PUT /api/users/:mobile/login — update last_login timestamp */
 async function handleUpdateLogin(req, res, mobile) {
-    assertDbAvailable();
+    const client = assertDbAvailable();
 
     if (!mobile || !/^\d{10}$/.test(mobile)) {
         throw createHttpError(400, 'Invalid mobile number.');
     }
 
-    const { data, error } = await db
+    const { data, error } = await client
         .from('users')
         .update({ last_login: new Date().toISOString() })
         .eq('mobile', mobile)
@@ -468,7 +569,108 @@ async function handleUpdateLogin(req, res, mobile) {
     sendJson(req, res, 200, { user: rowToProfile(data) });
 }
 
-// ─── Static file server ───────────────────────────────────────────────────────
+// ─── API Router (Handles both standalone Node & Vercel Functions) ─────────────
+
+function getNormalizedRequestUrl(req) {
+    const rawPath = req.headers['x-forwarded-url'] || req.headers['x-matched-path'] || req.url || '/';
+    const parsed = new URL(rawPath, `http://${req.headers.host || 'localhost'}`);
+
+    // If rewritten to /api/index.js, extract original API path
+    if (parsed.pathname === '/api/index.js' || parsed.pathname === '/api/index' || parsed.pathname === '/api') {
+        if (req.query && req.query['0']) {
+            parsed.pathname = `/api/${req.query['0']}`;
+        } else if (req.url && req.url.startsWith('/api/') && req.url !== '/api/index.js') {
+            parsed.pathname = new URL(req.url, 'http://localhost').pathname;
+        }
+    }
+    return parsed;
+}
+
+async function handleApiRequest(req, res) {
+    const requestUrl = getNormalizedRequestUrl(req);
+
+    try {
+        if (req.method === 'OPTIONS') {
+            setCorsHeaders(req, res);
+            res.writeHead(204);
+            res.end();
+            return;
+        }
+
+        // API Info / Index
+        if (requestUrl.pathname === '/api' || requestUrl.pathname === '/api/') {
+            sendJson(req, res, 200, {
+                name: 'AgriFarmers API',
+                status: 'online',
+                runtime: process.env.VERCEL ? 'Vercel Serverless' : 'Node.js Standalone',
+                version: '1.0.0',
+                db: getDb() !== null
+            });
+            return;
+        }
+
+        // Health check
+        if (requestUrl.pathname === '/api/health' && req.method === 'GET') {
+            sendJson(req, res, 200, {
+                ok: true,
+                db: getDb() !== null,
+                runtime: process.env.VERCEL ? 'vercel' : 'node'
+            });
+            return;
+        }
+
+        // OTP routes
+        if (requestUrl.pathname === '/api/otp/send' && req.method === 'POST') {
+            await handleSendOtp(req, res);
+            return;
+        }
+
+        if (requestUrl.pathname === '/api/otp/verify' && req.method === 'POST') {
+            await handleVerifyOtp(req, res);
+            return;
+        }
+
+        // Users routes
+        if (requestUrl.pathname === '/api/users' && req.method === 'POST') {
+            await handleCreateUser(req, res);
+            return;
+        }
+
+        const userMobileMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})$/);
+        if (userMobileMatch && req.method === 'GET') {
+            await handleGetUser(req, res, userMobileMatch[1]);
+            return;
+        }
+
+        const loginUpdateMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})\/login$/);
+        if (loginUpdateMatch && req.method === 'PUT') {
+            await handleUpdateLogin(req, res, loginUpdateMatch[1]);
+            return;
+        }
+
+        // AgroVision Precision Agriculture Additive Router
+        if (requestUrl.pathname.startsWith('/api/agrovision')) {
+            const { handleAgrovisionRequest } = require('./routes/agrovision');
+            if (await handleAgrovisionRequest(req, res, requestUrl, { sendJson, readJsonBody, createHttpError })) {
+                return;
+            }
+        }
+
+        throw createHttpError(404, `API route not found: ${requestUrl.pathname}`);
+    } catch (error) {
+        const statusCode = error.statusCode || 500;
+        if (statusCode >= 500) {
+            console.error(error);
+        }
+        sendJson(req, res, statusCode, {
+            error: statusCode >= 500 ? 'Server error' : 'Request error',
+            message: error.message || 'Something went wrong.',
+            retryAfterSeconds: error.retryAfterSeconds
+        });
+    }
+}
+
+// ─── Static file server (Local standalone dev) ────────────────────────────────
 
 function isForbiddenStaticPath(pathname) {
     const segments = pathname.split('/').filter(Boolean);
@@ -526,85 +728,33 @@ async function serveStaticFile(req, res) {
 async function handleRequest(req, res) {
     const requestUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
 
-    try {
-        if (requestUrl.pathname.startsWith('/api/')) {
-            if (req.method === 'OPTIONS') {
-                setCorsHeaders(req, res);
-                res.writeHead(204);
-                res.end();
-                return;
-            }
-
-            // Health
-            if (requestUrl.pathname === '/api/health' && req.method === 'GET') {
-                sendJson(req, res, 200, { ok: true, db: db !== null });
-                return;
-            }
-
-            // OTP
-            if (requestUrl.pathname === '/api/otp/send' && req.method === 'POST') {
-                await handleSendOtp(req, res);
-                return;
-            }
-
-            if (requestUrl.pathname === '/api/otp/verify' && req.method === 'POST') {
-                await handleVerifyOtp(req, res);
-                return;
-            }
-
-            // Users
-            if (requestUrl.pathname === '/api/users' && req.method === 'POST') {
-                await handleCreateUser(req, res);
-                return;
-            }
-
-            const userMobileMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})$/);
-            if (userMobileMatch && req.method === 'GET') {
-                await handleGetUser(req, res, userMobileMatch[1]);
-                return;
-            }
-
-            const loginUpdateMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})\/login$/);
-            if (loginUpdateMatch && req.method === 'PUT') {
-                await handleUpdateLogin(req, res, loginUpdateMatch[1]);
-                return;
-            }
-
-            // AgroVision Precision Agriculture Additive Router
-            if (requestUrl.pathname.startsWith('/api/agrovision')) {
-                const { handleAgrovisionRequest } = require('./routes/agrovision');
-                if (await handleAgrovisionRequest(req, res, requestUrl, { sendJson, readJsonBody, createHttpError })) {
-                    return;
-                }
-            }
-
-            throw createHttpError(404, 'API route not found.');
-        }
-
-        if (req.method !== 'GET' && req.method !== 'HEAD') {
-            res.writeHead(405);
-            res.end('Method not allowed');
-            return;
-        }
-
-        await serveStaticFile(req, res);
-    } catch (error) {
-        const statusCode = error.statusCode || 500;
-        if (statusCode >= 500) {
-            console.error(error);
-        }
-        sendJson(req, res, statusCode, {
-            error: statusCode >= 500 ? 'Server error' : 'Request error',
-            message: error.message || 'Something went wrong.',
-            retryAfterSeconds: error.retryAfterSeconds
-        });
+    if (requestUrl.pathname.startsWith('/api/') || requestUrl.pathname === '/api') {
+        await handleApiRequest(req, res);
+        return;
     }
+
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+        res.writeHead(405);
+        res.end('Method not allowed');
+        return;
+    }
+
+    await serveStaticFile(req, res);
 }
 
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
-initDb().then(() => {
-    http.createServer(handleRequest).listen(PORT, () => {
-        console.log(`AgriFarmers server running at http://localhost:${PORT}`);
+if (require.main === module) {
+    initDb().then(() => {
+        http.createServer(handleRequest).listen(PORT, () => {
+            console.log(`AgriFarmers server running at http://localhost:${PORT}`);
+        });
     });
-});
+}
+
+module.exports = {
+    handleRequest,
+    handleApiRequest,
+    initDb,
+    getDb
+};

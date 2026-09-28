@@ -41,22 +41,34 @@ function maskPhoneNumber(phoneNumber) {
     return `+91 ******${mobile.slice(-4)}`;
 }
 
+let activeOtpToken = null;
+
 function getOtpApiBaseUrl() {
     const configuredBaseUrl = window.AGRIFARMERS_CONFIG?.otpApiBaseUrl || '';
     return configuredBaseUrl.replace(/\/+$/, '');
 }
 
 async function postOtpRequest(endpoint, payload) {
+    const bodyPayload = { ...payload };
+    if (endpoint === 'verify' && activeOtpToken && !bodyPayload.otpToken) {
+        bodyPayload.otpToken = activeOtpToken;
+    }
+
     const response = await fetch(`${getOtpApiBaseUrl()}/api/otp/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        credentials: 'include',
+        body: JSON.stringify(bodyPayload)
     });
 
     let result = {};
     try {
         result = await response.json();
     } catch (_) {}
+
+    if (result.otpToken) {
+        activeOtpToken = result.otpToken;
+    }
 
     if (!response.ok) {
         throw new Error(result.message || result.error || 'OTP request failed. Please try again.');
@@ -68,7 +80,9 @@ async function postOtpRequest(endpoint, payload) {
 // ─── User API helpers ─────────────────────────────────────────────────────────
 
 async function apiGetUser(mobile) {
-    const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}`);
+    const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}`, {
+        credentials: 'include'
+    });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error('Failed to fetch user profile.');
     const data = await response.json();
@@ -79,6 +93,7 @@ async function apiCreateUser(profile) {
     const response = await fetch(`${getOtpApiBaseUrl()}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(profile)
     });
 
@@ -94,7 +109,8 @@ async function apiCreateUser(profile) {
 
 async function apiUpdateLogin(mobile) {
     const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}/login`, {
-        method: 'PUT'
+        method: 'PUT',
+        credentials: 'include'
     });
 
     let data = {};

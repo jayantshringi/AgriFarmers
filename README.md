@@ -77,21 +77,53 @@
 AgriFarmers/
 ├── index.html                 # Main application single-page interface & modals
 ├── install.html               # Dedicated PWA installation page
-├── server.js                  # Node.js backend API & static file HTTP server
+├── api/
+│   └── index.js               # Vercel Serverless Function entry point (all /api/* routes)
+├── vercel.json                # Vercel deployment rewrites and caching headers
+├── server.js                  # Dual-mode backend API & static HTTP server (Vercel & Node.js)
 ├── script.js                  # PWA installation handlers, UI interactions, modals
 ├── styles.css                 # Custom CSS overrides and animation styling
-├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.8)
+├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.9, /api bypass)
 ├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
 ├── package.json               # Node.js manifest & dependencies (`@supabase/supabase-js`)
 ├── js/
-│   ├── app-config.js          # Runtime configuration (API base URL for cross-origin setups)
-│   ├── auth.js                # Auth service layer (OTP send/verify, user profile CRUD)
+│   ├── app-config.js          # Runtime config (auto same-origin on Vercel/localhost)
+│   ├── auth.js                # Auth service layer (stateless OTP token, Supabase CRUD)
 │   ├── auth-ui.js             # Authentication UI event listeners & form validators
 │   ├── storage.js             # LocalStorage session caching utilities
 │   └── translations.js        # Multi-lingual translation dictionaries (EN, HI, PA)
+├── routes/
+│   └── agrovision.js          # Precision agriculture AI diagnostics & calculations
 ├── icons/                     # PWA app icons (16x16 up to 512x512)
 └── screenshots/               # Application UI preview images
 ```
+
+---
+
+## ⚡ Deployment on Vercel (Frontend + Backend)
+
+AgriFarmers is configured for single-project deployment on **Vercel** with zero extra build steps:
+
+1. **Push your code to GitHub / GitLab / Bitbucket**.
+2. **Import project into Vercel**:
+   - Framework Preset: **Other**
+   - Root Directory: `./`
+   - Build Command: Leave empty (or default)
+   - Output Directory: Leave empty (or default)
+3. **Configure Environment Variables** in Vercel Project Settings:
+   | Variable | Description | Example / Source |
+   |:---|:---|:---|
+   | `SUPABASE_URL` | Supabase project URL | `https://uypxfhojseqxxjipgefi.supabase.co` |
+   | `SUPABASE_KEY` | Supabase anon or service role key | From Supabase Project API Settings |
+   | `TEXTBEE_API_KEY` | TextBee gateway API key | TextBee Dashboard |
+   | `TEXTBEE_DEVICE_ID` | TextBee device ID | TextBee Dashboard |
+   | `OTP_SECRET` | Secret key used for signing OTP tokens | Any secure 32+ char string |
+   | `OTP_TTL_SECONDS` | OTP expiration window (default: 120) | `120` |
+   | `TEXTBEE_SIM_SUBSCRIPTION_ID` | SIM slot ID (optional) | `1` |
+4. **Deploy**:
+   - Vercel automatically deploys all static assets (`index.html`, `script.js`, etc.) to its global Edge CDN.
+   - All `/api/*` routes are handled serverlessly by [`api/index.js`](file:///d:/Projects/AgriFarmers/api/index.js).
+   - Both frontend and backend run under the same origin with no CORS hurdles and zero cold-sleep delays.
 
 ---
 
@@ -99,10 +131,10 @@ AgriFarmers/
 
 AgriFarmers complies with modern PWA standards:
 
-1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers-SIH-2025/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v5.8`) to precache static HTML, CSS, JavaScript, icons, and CDN assets for full offline usability.
+1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v5.9`) to precache static HTML, CSS, JavaScript, icons, and CDN assets for full offline usability while bypassing dynamic `/api/` calls.
 2. **Installability**: Meets Chrome/Edge Web App criteria. Displays an interactive install prompt or banner.
 3. **PWA Diagnostics**: Test app status directly from the UI using `diagnosePWA()` or `forcePWAInstall()`.
-4. **Dedicated Install Page**: Visit [`install.html`](file:///d:/Projects/AgriFarmers-SIH-2025/install.html) for step-by-step device installation guides.
+4. **Dedicated Install Page**: Visit [`install.html`](file:///d:/Projects/AgriFarmers/install.html) for step-by-step device installation guides.
 
 ---
 
