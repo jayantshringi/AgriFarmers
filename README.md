@@ -7,7 +7,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-0A66C2?style=flat&logo=githubpages&logoColor=white)](https://jayantshringi.github.io/AgriFarmers-SIH-2025)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-0A66C2?style=flat&logo=githubpages&logoColor=white)](https://jayantshringi.github.io/AgriFarmers/)
 
 > **A multi-lingual Progressive Web App (PWA) empowering Indian farmers with real-time weather analytics, regional seed & fertilizer recommendations, live Mandi market prices, and secure SMS OTP authentication.**
 
@@ -63,7 +63,7 @@
 |---|---|---|
 | **Frontend** | HTML5, CSS3, Vanilla JS (ES6+) | Lightweight, high-performance core web stack |
 | **Styling** | Tailwind CSS, Font Awesome | Modern visual design system with Indian flag accents & icons |
-| **PWA Engine** | Service Worker (v5.4), Web Manifest | Cache-First offline fallback, assets precaching, install prompts |
+| **PWA Engine** | Service Worker (v5.8), Web Manifest | Cache-First offline fallback, assets precaching, install prompts |
 | **Backend API** | Node.js (`node:http`, `node:crypto`) | Lightweight REST API server with zero external backend dependencies |
 | **Database** | MySQL (`mysql2/promise`) | Relational persistence with connection pooling & auto-migration |
 | **SMS Gateway** | TextBee API | Server-side SMS dispatch for 6-digit OTP verification |
@@ -80,7 +80,7 @@ AgriFarmers/
 ├── server.js                  # Node.js backend API & static file HTTP server
 ├── script.js                  # PWA installation handlers, UI interactions, modals
 ├── styles.css                 # Custom CSS overrides and animation styling
-├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.4)
+├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.8)
 ├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
 ├── package.json               # Node.js manifest & dependencies (`@supabase/supabase-js`)
 ├── js/
@@ -99,7 +99,7 @@ AgriFarmers/
 
 AgriFarmers complies with modern PWA standards:
 
-1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers-SIH-2025/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v5.4`) to precache static HTML, CSS, JavaScript, icons, and CDN assets for full offline usability.
+1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers-SIH-2025/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v5.8`) to precache static HTML, CSS, JavaScript, icons, and CDN assets for full offline usability.
 2. **Installability**: Meets Chrome/Edge Web App criteria. Displays an interactive install prompt or banner.
 3. **PWA Diagnostics**: Test app status directly from the UI using `diagnosePWA()` or `forcePWAInstall()`.
 4. **Dedicated Install Page**: Visit [`install.html`](file:///d:/Projects/AgriFarmers-SIH-2025/install.html) for step-by-step device installation guides.

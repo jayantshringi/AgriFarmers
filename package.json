@@ -1,8 +1,8 @@
 {
-  "name": "agrifarmers-sih-2025",
+  "name": "agrifarmers",
   "version": "1.0.0",
   "private": true,
-  "description": "AgriFarmers SIH 2025 prototype with TextBee OTP and Supabase support",
+  "description": "AgriFarmers prototype with TextBee OTP and Supabase support",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
