@@ -59,6 +59,9 @@
 
         initForm();
         calculateIrrigationPlan();
+        if (window.translateContainer) {
+            window.translateContainer(modal);
+        }
     }
 
     function closeIrrigationPlannerModal() {
@@ -217,6 +220,10 @@
                     </div>
                 `;
             }).join('');
+
+            if (window.translateContainer) {
+                window.translateContainer(scheduleContainer);
+            }
         }
     }
 

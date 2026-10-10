@@ -69,6 +69,9 @@
         modal.classList.add('active');
         renderPresetSamples();
         resetToUploadState();
+        if (window.translateContainer) {
+            window.translateContainer(modal);
+        }
     }
 
     function closeCropDoctorModal() {
@@ -380,6 +383,10 @@
 
         // Render Tabs
         renderRemedyTabs(data);
+
+        if (window.translateContainer && resultZone) {
+            window.translateContainer(resultZone);
+        }
 
         if (window.showToast) {
             window.showToast(`AI Diagnosis complete: ${data.disease}`, isHealthy ? 'success' : 'info');

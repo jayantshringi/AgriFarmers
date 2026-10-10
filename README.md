@@ -6,10 +6,11 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Leaflet](https://img.shields.io/badge/Leaflet-199900?style=flat&logo=leaflet&logoColor=white)](https://leafletjs.com/)
 [![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 [![Live Demo](https://img.shields.io/badge/Live_Demo-0A66C2?style=flat&logo=githubpages&logoColor=white)](https://jayantshringi.github.io/AgriFarmers/)
 
-> **A multi-lingual Progressive Web App (PWA) empowering Indian farmers with real-time weather analytics, regional seed & fertilizer recommendations, live Mandi market prices, and secure SMS OTP authentication.**
+> **A multi-lingual Progressive Web App (PWA) and precision agriculture platform empowering Indian farmers with real-time weather analytics, AI leaf disease diagnostics, ICAR soil prescriptions, FAO-56 irrigation planning, interactive GIS farm mapping, live Mandi market prices, and secure SMS OTP authentication.**
 
 ---
 
@@ -23,6 +24,7 @@
 
 - [About The Project](#-about-the-project)
 - [Key Features](#-key-features)
+- [AgroVision Precision Suite](#-agrovision-precision-suite)
 - [Tech Stack](#-tech-stack)
 - [Project Architecture & Directory Structure](#-project-architecture--directory-structure)
 - [Progressive Web App (PWA) & Offline Mode](#-progressive-web-app-pwa--offline-mode)
@@ -38,7 +40,8 @@
 
 ### Core Objectives:
 - **Data-Driven Farming**: Deliver location-accurate weather updates, soil-specific fertilizer mixes, and regional seed advice.
-- **Market Transparency**: Provide real-time local Mandi prices to help farmers sell their produce at optimal rates.
+- **Precision Diagnostics (AgroVision)**: Enable instant leaf disease identification, scientific remediation plans, and smart irrigation scheduling.
+- **Market Transparency**: Provide real-time local Mandi prices and predictive price forecasts to help farmers sell produce at optimal rates.
 - **Accessibility & Inclusivity**: Easy toggling between English, Hindi, and Punjabi with intuitive icons and high-contrast visual design.
 - **Zero-Friction Authentication**: Passwordless login using SMS OTP via mobile numbers.
 - **Offline Reliability**: Progressive Web App capabilities ensure core features remain accessible even with unstable rural internet connectivity.
@@ -47,13 +50,38 @@
 
 ## ✨ Key Features
 
-- 🗣️ **Multi-Lingual Interface**: Instant switching between **English**, **Hindi (हिंदी)**, and **Punjabi (ਪੰਜਾਬੀ)** with UI translations managed via modular JSON dictionaries.
-- 📱 **Progressive Web App (PWA)**: Installable directly on Android, iOS, and Desktop home screens with offline caching (Service Worker v5.4) and standalone display.
-- 🔐 **SMS OTP Authentication**: Secure SMS-based login and signup powered by **TextBee Gateway API** with HMAC-SHA256 hashed OTPs, 120-second expiration, rate-limiting, and attempt caps.
-- 🗄️ **Persistent User Profiles**: Integrated Node.js + MySQL database storage (`users` table) with silent fallback to browser `localStorage` when offline.
+- 🗣️ **Multi-Lingual Interface**: Instant switching between **English**, **Hindi (हिंदी)**, and **Punjabi (ਪੰਜਾਬੀ)** across all 28 Indian States & Union Territories.
+- 📱 **Progressive Web App (PWA)**: Installable directly on Android, iOS, and Desktop home screens with offline caching (Service Worker v6.1) and standalone display.
+- 🔐 **SMS OTP Authentication**: Secure SMS-based login and signup powered by **TextBee Gateway API** with HMAC-SHA256 hashed OTP tokens, 120-second expiration, rate-limiting, and attempt caps.
+- 🗄️ **Persistent User Profiles**: Integrated Node.js + **Supabase PostgreSQL** storage (`users` table) with silent fallback to browser `localStorage` when offline.
 - 🌦️ **Weather Forecast & Location Intelligence**: Geolocation-driven weather tracking with regional forecasts and tailored daily farming tips.
-- 🌱 **Smart Seed & Fertilizer Advice**: Dynamic recommendations for crops (Wheat, Rice, Cotton, etc.) and optimal organic vs. NPK vs. Urea fertilizer ratios based on the user's state and district.
-- 📊 **Mandi Market Prices**: Real-time crop price tracking and daily price trends for agricultural produce across major Indian markets.
+- 🌱 **Smart Seed & Fertilizer Advice**: Dynamic recommendations for crops (Wheat, Rice, Cotton, etc.) and optimal organic vs. NPK fertilizer ratios based on the user's state and district.
+- 📊 **Mandi Market Prices & Forecasts**: Real-time crop price tracking and daily price trends for agricultural produce across major Indian markets.
+
+---
+
+## 🌿 AgroVision Precision Suite
+
+AgriFarmers includes an isolated, high-performance precision agriculture toolset:
+
+1. 🩺 **Crop Doctor (Leaf Disease Diagnosis Engine)**:
+   - Instant visual leaf pathology diagnosis for **Wheat**, **Rice**, **Cotton**, and **Tomato**, plus healthy crop baselines.
+   - Covers critical pathogens: Yellow Rust, Leaf Rust, Powdery Mildew, Bacterial Leaf Blight, Blast, Leaf Curl Virus, Early/Late Blight.
+   - Detailed treatment prescriptions: scientific name, symptoms, organic/bio-remedies (Neem NSKE, *Trichoderma*, sour buttermilk), chemical controls (Tilt, Folicur, Mancozeb), and preventive practices.
+
+2. 🧪 **Precision Soil Lab & Dynamic NPK Prescription**:
+   - Implements Indian Council of Agricultural Research (ICAR) Soil Test Crop Response (STCR) equations.
+   - Evaluates soil pH across a 7-stage spectrum (Very Acidic to Sodic Alkaline) and recommends amendments (agricultural lime or gypsum).
+   - Calculates exact commercial fertilizer dosage: **Urea (46% N)**, **DAP (18:46:0)**, and **MOP (60% K₂O)** bags per acre.
+
+3. 💧 **Smart Irrigation Planner (FAO-56 ET0 Engine)**:
+   - Evapotranspiration modeling across crop growth stages ($K_c$), root depths, and 5 soil textures.
+   - Compares Drip (90% efficiency), Micro-Sprinkler (80%), and Surface Flood (55%) systems.
+   - Calculates gross daily water volume (liters), 5 HP pump operating run-time, and generates a 7-day watering calendar.
+
+4. 🗺️ **Interactive GIS Farm Map**:
+   - Leaflet.js geospatial mapping interface covering APMC Grain Mandis, ICAR Krishi Vigyan Kendras (KVKs), certified fertilizer dealers, and soil testing labs.
+   - Live GPS distance calculation, category filtering, operating hours, commodity listings, and direct navigation links.
 
 ---
 
@@ -61,13 +89,15 @@
 
 | Component | Technology | Description |
 |---|---|---|
-| **Frontend** | HTML5, CSS3, Vanilla JS (ES6+) | Lightweight, high-performance core web stack |
-| **Styling** | Tailwind CSS, Font Awesome | Modern visual design system with Indian flag accents & icons |
-| **PWA Engine** | Service Worker (v5.8), Web Manifest | Cache-First offline fallback, assets precaching, install prompts |
-| **Backend API** | Node.js (`node:http`, `node:crypto`) | Lightweight REST API server with zero external backend dependencies |
-| **Database** | MySQL (`mysql2/promise`) | Relational persistence with connection pooling & auto-migration |
-| **SMS Gateway** | TextBee API | Server-side SMS dispatch for 6-digit OTP verification |
-| **State & Storage** | LocalStorage + ES Modules | Client-side session caching and fast initial renders |
+| **Frontend** | HTML5, CSS3, Vanilla JS (ES6+) | Lightweight, high-performance core web stack with zero build toolchain bloat |
+| **Styling** | Tailwind CSS, Font Awesome, `css/styles.css` | Modern visual design system with Indian flag accents & micro-animations |
+| **GIS Mapping** | Leaflet.js (v1.9.4) & OpenStreetMap | Geospatial facility locator with custom pin markers and interactive popups |
+| **PWA Engine** | Service Worker (v6.1), Web Manifest | Cache-First offline fallback, full asset precaching including AgroVision, install prompts |
+| **Backend API** | Modular Node.js (`node:http`, `node:crypto`) | Lightweight REST API organized into `routes/otp.js`, `routes/users.js`, `routes/agrovision.js` |
+| **Serverless Deployment** | Vercel Serverless Functions (`api/index.js`) | Single-origin fullstack deployment with edge asset caching & URL rewrites |
+| **Database** | Supabase PostgreSQL (`@supabase/supabase-js`) | Relational persistence with connection pooling, user profiles, and timestamps |
+| **SMS Gateway** | TextBee Android Gateway API | Server-side SMS dispatch for 6-digit OTP verification |
+| **State & Storage** | LocalStorage + ES Modules | Client-side session caching and instant offline-first renders |
 
 ---
 
@@ -75,27 +105,39 @@
 
 ```text
 AgriFarmers/
-├── index.html                 # Main application single-page interface & modals
-├── install.html               # Dedicated PWA installation page
 ├── api/
-│   └── index.js               # Vercel Serverless Function entry point (all /api/* routes)
-├── vercel.json                # Vercel deployment rewrites and caching headers
-├── server.js                  # Dual-mode backend API & static HTTP server (Vercel & Node.js)
-├── script.js                  # PWA installation handlers, UI interactions, modals
-├── styles.css                 # Custom CSS overrides and animation styling
-├── service-worker.js          # PWA Service Worker (Cache-First strategy v5.9, /api bypass)
-├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
-├── package.json               # Node.js manifest & dependencies (`@supabase/supabase-js`)
+│   └── index.js               # Vercel Serverless Function entry point (bridges to server.js)
+├── css/
+│   └── styles.css             # Modular auxiliary styles, animations, Leaflet pin styles
 ├── js/
+│   ├── app.js                 # Core frontend engine (PWA, geolocation, weather, market, states)
 │   ├── app-config.js          # Runtime config (auto same-origin on Vercel/localhost)
 │   ├── auth.js                # Auth service layer (stateless OTP token, Supabase CRUD)
 │   ├── auth-ui.js             # Authentication UI event listeners & form validators
 │   ├── storage.js             # LocalStorage session caching utilities
-│   └── translations.js        # Multi-lingual translation dictionaries (EN, HI, PA)
+│   ├── translations.js        # Multi-lingual translation dictionaries (EN, HI, PA)
+│   └── features/              # Modular AgroVision precision agriculture client modules
+│       ├── crop-doctor.js     # AgroVision Leaf Disease Diagnosis client module
+│       ├── farm-map.js        # AgroVision Leaflet GIS Interactive Farm & Facility Map
+│       ├── irrigation-planner.js # AgroVision FAO-56 Smart ET0 Irrigation Planner
+│       └── soil-prescription.js # AgroVision Precision Soil Lab & Dynamic NPK Calculator
 ├── routes/
+│   ├── otp.js                 # Modular TextBee SMS OTP dispatch & HMAC verification
+│   ├── users.js               # Modular Supabase user profile CRUD & last_login updates
 │   └── agrovision.js          # Precision agriculture AI diagnostics & calculations
-├── icons/                     # PWA app icons (16x16 up to 512x512)
-└── screenshots/               # Application UI preview images
+├── icons/                     # Centralized PWA app icons (16x16 up to 512x512)
+├── screenshots/               # Application UI preview images
+├── index.html                 # Main application single-page interface & modals
+├── install.html               # Dedicated PWA installation page
+├── script.js                  # Root backward-compatibility loader (delegates to js/app.js)
+├── styles.css                 # Root backward-compatibility stylesheet (@import css/styles.css)
+├── service-worker.js          # PWA Service Worker (Cache-First strategy v6.1, /api bypass)
+├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
+├── server.js                  # Dual-mode backend API & static HTTP server (Vercel & Node.js)
+├── vercel.json                # Vercel deployment rewrites and caching headers
+├── package.json               # Node.js manifest & dependencies (`@supabase/supabase-js`)
+├── package-lock.json          # Dependency lockfile
+└── README.md                  # Project documentation
 ```
 
 ---
@@ -113,7 +155,7 @@ AgriFarmers is configured for single-project deployment on **Vercel** with zero 
 3. **Configure Environment Variables** in Vercel Project Settings:
    | Variable | Description | Example / Source |
    |:---|:---|:---|
-   | `SUPABASE_URL` | Supabase project URL | `https://uypxfhojseqxxjipgefi.supabase.co` |
+   | `SUPABASE_URL` | Supabase project URL | `https://xyz.supabase.co` |
    | `SUPABASE_KEY` | Supabase anon or service role key | From Supabase Project API Settings |
    | `TEXTBEE_API_KEY` | TextBee gateway API key | TextBee Dashboard |
    | `TEXTBEE_DEVICE_ID` | TextBee device ID | TextBee Dashboard |
@@ -121,7 +163,7 @@ AgriFarmers is configured for single-project deployment on **Vercel** with zero 
    | `OTP_TTL_SECONDS` | OTP expiration window (default: 120) | `120` |
    | `TEXTBEE_SIM_SUBSCRIPTION_ID` | SIM slot ID (optional) | `1` |
 4. **Deploy**:
-   - Vercel automatically deploys all static assets (`index.html`, `script.js`, etc.) to its global Edge CDN.
+   - Vercel automatically deploys all static assets (`index.html`, `js/app.js`, `css/styles.css`, etc.) to its global Edge CDN.
    - All `/api/*` routes are handled serverlessly by [`api/index.js`](file:///d:/Projects/AgriFarmers/api/index.js).
    - Both frontend and backend run under the same origin with no CORS hurdles and zero cold-sleep delays.
 
@@ -131,7 +173,7 @@ AgriFarmers is configured for single-project deployment on **Vercel** with zero 
 
 AgriFarmers complies with modern PWA standards:
 
-1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v5.9`) to precache static HTML, CSS, JavaScript, icons, and CDN assets for full offline usability while bypassing dynamic `/api/` calls.
+1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v6.1`) to precache static HTML, CSS, JavaScript, icons, AgroVision feature modules, and CDN assets for full offline usability while bypassing dynamic `/api/` calls.
 2. **Installability**: Meets Chrome/Edge Web App criteria. Displays an interactive install prompt or banner.
 3. **PWA Diagnostics**: Test app status directly from the UI using `diagnosePWA()` or `forcePWAInstall()`.
 4. **Dedicated Install Page**: Visit [`install.html`](file:///d:/Projects/AgriFarmers/install.html) for step-by-step device installation guides.
@@ -140,7 +182,7 @@ AgriFarmers complies with modern PWA standards:
 
 ## 🗣️ Multi-Language Support
 
-All UI text is centralized in [`js/translations.js`](file:///d:/Projects/AgriFarmers-SIH-2025/js/translations.js). 
+All UI text is centralized in [`js/translations.js`](file:///d:/Projects/AgriFarmers/js/translations.js). 
 
 To add a new language key or expand language dictionaries:
 ```js

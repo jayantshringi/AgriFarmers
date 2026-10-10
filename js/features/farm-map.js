@@ -699,6 +699,10 @@
             userCoords = STATE_CENTERS[window.currentUser.state];
         }
 
+        if (window.translateContainer) {
+            window.translateContainer(modal);
+        }
+
         setTimeout(initMap, 200);
     }
 
@@ -898,6 +902,10 @@
                 </div>
             `;
         }).join('');
+
+        if (window.translateContainer) {
+            window.translateContainer(listContainer);
+        }
     }
 
     function setFilter(cat) {

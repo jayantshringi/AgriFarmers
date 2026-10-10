@@ -32,7 +32,12 @@ async function handleLogin() {
 
     const sent = await window._sendOTP(phoneNumber);
 
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i><span id="sendOtpBtn">Send OTP</span>'; }
+    if (btn) {
+        const lang = window.currentLanguage || 'hi';
+        const txt = window.translations?.[lang]?.sendOtpBtn || 'Send OTP';
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-sign-in-alt mr-2"></i><span id="sendOtpBtn">${txt}</span>`;
+    }
 
     if (sent) {
         showPage('otpPage');
@@ -75,7 +80,12 @@ async function handleSignUp() {
 
     const sent = await window._sendOTP(phoneNumber);
 
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-user-plus mr-2"></i><span id="signupBtn">Sign Up</span>'; }
+    if (btn) {
+        const lang = window.currentLanguage || 'hi';
+        const txt = window.translations?.[lang]?.signupBtn || 'Sign Up';
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-user-plus mr-2"></i><span id="signupBtn">${txt}</span>`;
+    }
 
     if (sent) {
         showPage('otpPage');
@@ -99,7 +109,12 @@ async function verifyOTP() {
     await window._verifyOTP(enteredOTP);
 
     // Re-enable button in case of failure (success navigates away)
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle mr-2"></i><span id="verifyOtpBtn">Verify OTP</span>'; }
+    if (btn) {
+        const lang = window.currentLanguage || 'hi';
+        const txt = window.translations?.[lang]?.verifyOtpBtn || 'Verify OTP';
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-check-circle mr-2"></i><span id="verifyOtpBtn">${txt}</span>`;
+    }
 }
 
 async function resendOTP() {
@@ -126,7 +141,12 @@ async function resendOTP() {
         window.startOTPTimer?.();
         showToast('New OTP sent to ' + phoneText, 'success');
     }
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-redo mr-1"></i><span id="resendOtpBtn">Resend OTP</span>'; }
+    if (btn) {
+        const lang = window.currentLanguage || 'hi';
+        const txt = window.translations?.[lang]?.resendOtpBtn || 'Resend OTP';
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-redo mr-1"></i><span id="resendOtpBtn">${txt}</span>`;
+    }
 }
 
 window.handleLogin = handleLogin;

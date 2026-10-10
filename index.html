@@ -60,7 +60,7 @@
     </script>
 
     <!-- Custom Styles -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 
 <body class="bg-gray-50">
@@ -116,26 +116,179 @@
                     <div class="flex items-center space-x-4">
                         <!-- Language Selector -->
                         <div class="relative">
-                            <button id="languageButton"
-                                class="flex items-center space-x-2 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100">
-                                <i class="fas fa-globe"></i>
-                                <span id="currentLanguage">हिंदी</span>
-                                <i class="fas fa-chevron-down text-xs ml-1"></i>
+                            <button id="languageButton" type="button" aria-label="Select Regional Language"
+                                class="flex items-center space-x-2 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm bg-white">
+                                <i class="fas fa-globe text-green-600"></i>
+                                <span id="currentLanguage" class="font-bold text-sm">हिंदी</span>
+                                <i class="fas fa-chevron-down text-xs ml-1 text-gray-400"></i>
                             </button>
                             <div id="languageDropdown"
-                                class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg hidden z-50">
-                                <button onclick="changeLanguage('en')"
-                                    class="w-full text-left px-4 py-2 hover:bg-gray-100">
-                                    <span>🇺🇸 EN</span>
-                                </button>
-                                <button onclick="changeLanguage('hi')"
-                                    class="w-full text-left px-4 py-2 hover:bg-gray-100">
-                                    <span>🇮🇳 हिंदी</span>
-                                </button>
-                                <button onclick="changeLanguage('pa')"
-                                    class="w-full text-left px-4 py-2 hover:bg-gray-100">
-                                    <span>🇮🇳 ਪੰਜਾਬੀ</span>
-                                </button>
+                                class="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-2xl hidden z-50 divide-y divide-gray-100 p-1.5 scrollbar-thin">
+                                <div class="px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl mb-1 border border-green-100">
+                                    <p class="text-[11px] font-bold text-green-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="fas fa-language text-green-600"></i>
+                                        <span>Indian State Native Languages (13)</span>
+                                    </p>
+                                    <p class="text-[10px] text-green-700">अपनी राज्य भाषा चुनें / Select State Language</p>
+                                </div>
+                                <div class="space-y-0.5">
+                                    <!-- 1. English -->
+                                    <button onclick="changeLanguage('en')" data-lang="en"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇬🇧</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">English</p>
+                                                <p class="text-[10px] text-gray-500">Universal / Official</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 2. Hindi -->
+                                    <button onclick="changeLanguage('hi')" data-lang="hi"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">हिंदी (Hindi)</p>
+                                                <p class="text-[10px] text-gray-500">UP, MP, Bihar, Raj, Del, HR, UK</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 3. Punjabi -->
+                                    <button onclick="changeLanguage('pa')" data-lang="pa"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">ਪੰਜਾਬੀ (Punjabi)</p>
+                                                <p class="text-[10px] text-gray-500">Punjab, Chandigarh</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 4. Bengali -->
+                                    <button onclick="changeLanguage('bn')" data-lang="bn"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">বাংলা (Bengali)</p>
+                                                <p class="text-[10px] text-gray-500">West Bengal, Tripura, Assam</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 5. Marathi -->
+                                    <button onclick="changeLanguage('mr')" data-lang="mr"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">मराठी (Marathi)</p>
+                                                <p class="text-[10px] text-gray-500">Maharashtra, Goa</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 6. Telugu -->
+                                    <button onclick="changeLanguage('te')" data-lang="te"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">తెలుగు (Telugu)</p>
+                                                <p class="text-[10px] text-gray-500">Andhra Pradesh, Telangana</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 7. Tamil -->
+                                    <button onclick="changeLanguage('ta')" data-lang="ta"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">தமிழ் (Tamil)</p>
+                                                <p class="text-[10px] text-gray-500">Tamil Nadu, Puducherry</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 8. Gujarati -->
+                                    <button onclick="changeLanguage('gu')" data-lang="gu"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">ગુજરાતી (Gujarati)</p>
+                                                <p class="text-[10px] text-gray-500">Gujarat, Daman & Diu</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 9. Kannada -->
+                                    <button onclick="changeLanguage('kn')" data-lang="kn"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">ಕನ್ನಡ (Kannada)</p>
+                                                <p class="text-[10px] text-gray-500">Karnataka</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 10. Malayalam -->
+                                    <button onclick="changeLanguage('ml')" data-lang="ml"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">മലയാളം (Malayalam)</p>
+                                                <p class="text-[10px] text-gray-500">Kerala, Lakshadweep</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 11. Odia -->
+                                    <button onclick="changeLanguage('or')" data-lang="or"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">ଓଡ଼ିଆ (Odia)</p>
+                                                <p class="text-[10px] text-gray-500">Odisha</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 12. Assamese -->
+                                    <button onclick="changeLanguage('as')" data-lang="as"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">অসমীয়া (Assamese)</p>
+                                                <p class="text-[10px] text-gray-500">Assam</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                    <!-- 13. Urdu -->
+                                    <button onclick="changeLanguage('ur')" data-lang="ur"
+                                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left hover:bg-green-50 transition-colors text-xs">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-base">🇮🇳</span>
+                                            <div>
+                                                <p class="font-bold text-gray-900 leading-tight">اردو (Urdu)</p>
+                                                <p class="text-[10px] text-gray-500">J&K, Telangana, UP</p>
+                                            </div>
+                                        </div>
+                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1373,7 +1526,7 @@
 
     <!-- PWA CORE SCRIPT -->
     <script src="js/translations.js"></script>
-    <script src="script.js"></script>
+    <script src="js/app.js"></script>
     <script src="js/auth-ui.js"></script>
 
     <!-- AGROVISION PRECISION AGRICULTURE MODULES (ADDITIVE) -->

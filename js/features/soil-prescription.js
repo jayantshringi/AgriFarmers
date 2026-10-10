@@ -49,6 +49,9 @@
         modal.classList.add('active');
         initValues();
         calculatePrescription();
+        if (window.translateContainer) {
+            window.translateContainer(modal);
+        }
     }
 
     function closeSoilPrescriptionModal() {
@@ -322,6 +325,11 @@
                     <span>${rec}</span>
                 </li>
             `).join('');
+        }
+
+        const modal = document.getElementById('soilPrescriptionModal');
+        if (window.translateContainer && modal) {
+            window.translateContainer(modal);
         }
     }
 

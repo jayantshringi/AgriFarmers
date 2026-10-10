@@ -1,28 +1,36 @@
-// AgriFarmers Service Worker v6.0
-const CACHE_NAME = 'agrifarmers-v6.0';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v6.0';
+// AgriFarmers Service Worker v6.2
+const CACHE_NAME = 'agrifarmers-v6.2';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v6.2';
 
 // URLs for caching
 const STATIC_ASSETS = [
   './',
   './index.html',
   './manifest.json',
+  './css/styles.css',
   './styles.css',
+  './js/app.js',
   './script.js',
   './js/app-config.js',
   './js/auth.js',
   './js/storage.js',
   './js/translations.js',
   './js/auth-ui.js',
+  './js/features/crop-doctor.js',
+  './js/features/farm-map.js',
+  './js/features/irrigation-planner.js',
+  './js/features/soil-prescription.js',
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-  'https://cdn.tailwindcss.com'
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v6.0...');
+  console.log('[Service Worker] Installing v6.1...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
@@ -39,7 +47,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v6.0...');
+  console.log('[Service Worker] Activating v6.1...');
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
