@@ -205,7 +205,8 @@ console.log('🚜 AgriFarmers App Initializing...');
 
 // Global Variables
 let currentUser = null;
-let currentLanguage = 'hi';
+let currentLanguage = localStorage.getItem('agrifarmers_language') || 'hi';
+window.currentLanguage = currentLanguage;
 let userLocation = null;
 let otpTimer = null;
 let otpTimeLeft = 120;
@@ -227,8 +228,13 @@ function bootstrapApp() {
         initApp();
     }, 400);
     
-    // Load saved language preference
-    const savedLang = localStorage.getItem('agrifarmers_language') || 'hi';
+    // Load saved language preference - strictly default to Hindi ('hi')
+    let savedLang = localStorage.getItem('agrifarmers_language');
+    if (!savedLang || savedLang === 'undefined' || savedLang === 'null') {
+        savedLang = 'hi';
+    }
+    currentLanguage = savedLang;
+    window.currentLanguage = currentLanguage;
     changeLanguage(savedLang);
     
     // Update online status
@@ -1127,6 +1133,9 @@ async function loadWeatherData(lat, lon, customLocationName = null) {
             _lon: lon
         };
         
+        window.latestWeatherData = sampleWeather;
+        window.latestForecastData = null;
+
         updateWeatherCard(sampleWeather);
         updateWeatherModal(sampleWeather, null);
         updateFarmingTips(sampleWeather);
@@ -1195,36 +1204,47 @@ function getWeatherCondition(lat, lon) {
 // Update farming tips based on weather
 function updateFarmingTips(weatherData) {
     const tipsElement = document.getElementById('farmingAdvisory');
-    if (!tipsElement) return;
+    if (!tipsElement || !weatherData || !weatherData.main || !weatherData.weather) return;
     
     const temp = weatherData.main.temp;
     const condition = weatherData.weather[0].main;
     const humidity = weatherData.main.humidity;
     
-    let tip = '';
+    let tipKey = '';
+    let icon = '🌱';
     
     if (condition === 'Rain' || condition === 'Thunderstorm') {
-        tip = '🌧️ Rain expected. Good time for irrigation. Avoid chemical spraying today.';
+        tipKey = 'Rain expected. Good time for irrigation. Avoid chemical spraying today.';
+        icon = '🌧️';
     } else if (temp > 30) {
-        tip = '☀️ Hot day ahead. Water crops in early morning or late evening to prevent high evaporation.';
+        tipKey = 'Hot day ahead. Water crops in early morning or late evening to prevent high evaporation.';
+        icon = '☀️';
     } else if (temp < 15) {
-        tip = '❄️ Cool weather. Ideal for winter rabi crops. Protect delicate seedlings from cold night frost.';
+        tipKey = 'Cool weather. Ideal for winter rabi crops. Protect delicate seedlings from cold night frost.';
+        icon = '❄️';
     } else if (humidity > 80) {
-        tip = '💧 High humidity. Monitor for fungal leaf blights. Ensure adequate field ventilation.';
+        tipKey = 'High humidity. Monitor for fungal leaf blights. Ensure adequate field ventilation.';
+        icon = '💧';
     } else {
-        tip = '🌱 Favorable weather for farming activities. Ideal for soil preparation, irrigation and fertilization.';
+        tipKey = 'Favorable weather for farming activities. Ideal for soil preparation, irrigation and fertilization.';
+        icon = '🌱';
     }
     
-    tipsElement.textContent = tip;
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
+    const translatedTip = (window.t && targetLang !== 'en') ? window.t(tipKey, targetLang) : tipKey;
+    tipsElement.textContent = `${icon} ${translatedTip}`;
 }
 
 // Update weather card on dashboard
 function updateWeatherCard(weatherData) {
     const content = document.getElementById('weatherCardContent');
-    if (!content) return;
+    if (!content || !weatherData || !weatherData.main || !weatherData.weather) return;
     
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
     const temp = Math.round(weatherData.main.temp);
     const condition = weatherData.weather[0].main;
+    const rawDesc = weatherData.weather[0].description || condition;
+    const weatherDesc = window.getTranslatedWeatherDesc ? window.getTranslatedWeatherDesc(rawDesc, targetLang) : (window.t ? window.t(rawDesc, targetLang) : rawDesc);
     const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
     
     let icon = 'fa-cloud text-blue-500';
@@ -1235,12 +1255,15 @@ function updateWeatherCard(weatherData) {
     else if (condition.includes('Thunderstorm')) icon = 'fa-bolt text-yellow-500';
     else icon = 'fa-cloud-sun text-blue-500';
     
+    const humidityLabel = window.t ? window.t('Humidity', targetLang) : 'Humidity';
+    const windLabel = window.t ? window.t('Wind', targetLang) : 'Wind';
+
     content.innerHTML = `
         <div class="flex items-center justify-between">
             <div>
                 <i class="fas ${icon} text-4xl mb-2"></i>
                 <p class="text-3xl font-extrabold text-gray-900">${temp}°C</p>
-                <p class="text-gray-600 capitalize text-sm font-medium">${weatherData.weather[0].description}</p>
+                <p class="text-gray-600 capitalize text-sm font-medium">${weatherDesc}</p>
                 <p class="text-xs text-green-700 font-bold mt-1.5 flex items-center gap-1">
                     <i class="fas fa-location-crosshairs text-green-600"></i>
                     <span class="truncate max-w-[150px]">${locName}</span>
@@ -1248,25 +1271,29 @@ function updateWeatherCard(weatherData) {
             </div>
             <div class="text-right space-y-1">
                 <div class="bg-blue-50 px-2.5 py-1 rounded-lg">
-                    <p class="text-[10px] text-blue-700 font-medium uppercase">Humidity</p>
+                    <p class="text-[10px] text-blue-700 font-medium uppercase">${humidityLabel}</p>
                     <p class="font-bold text-sm text-blue-900">${weatherData.main.humidity}%</p>
                 </div>
                 <div class="bg-emerald-50 px-2.5 py-1 rounded-lg">
-                    <p class="text-[10px] text-emerald-700 font-medium uppercase">Wind</p>
+                    <p class="text-[10px] text-emerald-700 font-medium uppercase">${windLabel}</p>
                     <p class="font-bold text-sm text-emerald-900">${weatherData.wind.speed} km/h</p>
                 </div>
             </div>
         </div>
     `;
+    if (window.translateContainer) {
+        window.translateContainer(content, targetLang);
+    }
 }
 
 // Update weather modal with rich details & 5-day forecast
 function updateWeatherModal(weatherData, forecastData = null) {
     const content = document.getElementById('weatherModalContent');
-    if (!content) return;
+    if (!content || !weatherData || !weatherData.main || !weatherData.weather) return;
     
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
     const temp = Math.round(weatherData.main.temp);
-    const feelsLike = Math.round(weatherData.main.feels_like);
+    const feelsLike = Math.round(weatherData.main.feels_like || weatherData.main.temp);
     const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
     const lat = weatherData._lat || window.userLocation?.lat || 0;
     const lon = weatherData._lon || window.userLocation?.lon || 0;
@@ -1282,6 +1309,16 @@ function updateWeatherModal(weatherData, forecastData = null) {
     else if (condition.includes('Thunderstorm')) icon = 'fa-bolt text-yellow-500';
     else if (condition.includes('Mist') || condition.includes('Fog') || condition.includes('Haze')) icon = 'fa-smog text-slate-400';
     
+    const rawModalDesc = weatherData.weather[0].description || condition;
+    const weatherDesc = window.getTranslatedWeatherDesc ? window.getTranslatedWeatherDesc(rawModalDesc, targetLang) : (window.t ? window.t(rawModalDesc, targetLang) : rawModalDesc);
+
+    const localeMap = {
+        en: 'en-IN', hi: 'hi-IN', pa: 'pa-IN', bn: 'bn-IN',
+        mr: 'mr-IN', te: 'te-IN', ta: 'ta-IN', gu: 'gu-IN',
+        kn: 'kn-IN', ml: 'ml-IN', or: 'or-IN', as: 'as-IN', ur: 'ur-IN'
+    };
+    const currentLocale = localeMap[targetLang] || 'hi-IN';
+
     // Process 5-day forecast (1 entry per day)
     let forecastCardsHtml = '';
     if (forecastData && Array.isArray(forecastData.list)) {
@@ -1293,16 +1330,24 @@ function updateWeatherModal(weatherData, forecastData = null) {
             }
         });
 
+        const forecastTitle = window.t ? window.t('5-Day Agricultural Weather Forecast', targetLang) : '5-Day Agricultural Weather Forecast';
+        const rainWord = window.t ? window.t('rain', targetLang) : 'rain';
+
         forecastCardsHtml = `
             <div class="mt-6 pt-5 border-t border-gray-100">
                 <h4 class="font-bold text-sm text-gray-800 mb-3 flex items-center gap-1.5">
                     <i class="fas fa-calendar-week text-blue-600"></i>
-                    <span>5-Day Agricultural Weather Forecast</span>
+                    <span>${forecastTitle}</span>
                 </h4>
                 <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     ${Array.from(dailyMap.values()).map(item => {
                         const d = new Date(item.dt * 1000);
-                        const dayName = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        let dayName = '';
+                        try {
+                            dayName = d.toLocaleDateString(currentLocale, { weekday: 'short', month: 'short', day: 'numeric' });
+                        } catch (e) {
+                            dayName = d.toLocaleDateString('hi-IN', { weekday: 'short', month: 'short', day: 'numeric' });
+                        }
                         const fTemp = Math.round(item.main.temp);
                         const fCond = item.weather[0].main;
                         let fIcon = 'fa-cloud text-gray-400';
@@ -1310,14 +1355,16 @@ function updateWeatherModal(weatherData, forecastData = null) {
                         else if (fCond.includes('Rain')) fIcon = 'fa-cloud-rain text-blue-500';
                         else if (fCond.includes('Clouds')) fIcon = 'fa-cloud text-blue-400';
                         const pop = Math.round((item.pop || 0) * 100);
+                        const itemRawDesc = item.weather[0].description || fCond;
+                        const fDesc = window.getTranslatedWeatherDesc ? window.getTranslatedWeatherDesc(itemRawDesc, targetLang) : (window.t ? window.t(itemRawDesc, targetLang) : itemRawDesc);
 
                         return `
                             <div class="bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-center hover:bg-blue-50/50 transition-colors">
                                 <p class="text-xs font-bold text-gray-700">${dayName}</p>
                                 <i class="fas ${fIcon} text-2xl my-2"></i>
                                 <p class="text-sm font-extrabold text-gray-900">${fTemp}°C</p>
-                                <p class="text-[10px] text-gray-500 capitalize truncate">${item.weather[0].description}</p>
-                                ${pop > 0 ? `<p class="text-[10px] text-blue-600 font-semibold mt-1"><i class="fas fa-droplet text-[9px]"></i> ${pop}% rain</p>` : ''}
+                                <p class="text-[10px] text-gray-500 capitalize truncate">${fDesc}</p>
+                                ${pop > 0 ? `<p class="text-[10px] text-blue-600 font-semibold mt-1"><i class="fas fa-droplet text-[9px]"></i> ${pop}% ${rainWord}</p>` : ''}
                             </div>
                         `;
                     }).join('')}
@@ -1326,13 +1373,32 @@ function updateWeatherModal(weatherData, forecastData = null) {
         `;
     }
 
+    const liveGeoLabel = window.t ? window.t('Live Geo-Location', targetLang) : 'Live Geo-Location';
+    const refreshGpsLabel = window.t ? window.t('Refresh GPS', targetLang) : 'Refresh GPS';
+    const cityPlaceholder = window.t ? window.t('Check weather of another city or mandi (e.g. Kota, Ludhiana, Jaipur)', targetLang) : 'Check weather of another city or mandi (e.g. Kota, Ludhiana, Jaipur)';
+    const searchLabel = window.t ? window.t('Search', targetLang) : 'Search';
+    const feelsLikeLabel = window.t ? window.t('Feels like', targetLang) : 'Feels like';
+    const minMaxLabel = window.t ? window.t('Min / Max Temp', targetLang) : 'Min / Max Temp';
+    const humidityLabel = window.t ? window.t('Relative Humidity', targetLang) : 'Relative Humidity';
+    const windVelocityLabel = window.t ? window.t('Wind Velocity', targetLang) : 'Wind Velocity';
+    const pressureLabel = window.t ? window.t('Pressure', targetLang) : 'Pressure';
+    const visibilityLabel = window.t ? window.t('Visibility', targetLang) : 'Visibility';
+    const sunriseLabel = window.t ? window.t('Sunrise', targetLang) : 'Sunrise';
+    const sunsetLabel = window.t ? window.t('Sunset', targetLang) : 'Sunset';
+    const sprayLabel = window.t ? window.t('Spraying Condition', targetLang) : 'Spraying Condition';
+    
+    const isSprayingIdeal = weatherData.wind.speed < 15 && !condition.includes('Rain');
+    const sprayingText = isSprayingIdeal ?
+        `✅ ${window.t ? window.t('Ideal for fertilizer & pesticide spraying', targetLang) : 'Ideal for fertilizer & pesticide spraying'}` :
+        `⚠️ ${window.t ? window.t('Avoid chemical spraying due to wind/rain', targetLang) : 'Avoid chemical spraying due to wind/rain'}`;
+
     content.innerHTML = `
         <!-- Live Location Banner -->
         <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-4 text-white mb-5 shadow-sm">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <div>
                     <div class="flex items-center gap-1.5">
-                        <span class="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-wider">Live Geo-Location</span>
+                        <span class="px-2 py-0.5 bg-white/20 text-white rounded text-[10px] font-bold uppercase tracking-wider">${liveGeoLabel}</span>
                         ${lat && lon ? `<span class="text-[11px] opacity-85 font-mono">(${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)</span>` : ''}
                     </div>
                     <h3 class="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
@@ -1343,20 +1409,20 @@ function updateWeatherModal(weatherData, forecastData = null) {
                 <button onclick="getUserLocation(true)"
                     class="bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-white/25">
                     <i class="fas fa-sync-alt text-yellow-300"></i>
-                    <span>Refresh GPS</span>
+                    <span>${refreshGpsLabel}</span>
                 </button>
             </div>
         </div>
 
         <!-- Quick City Search for other farms/mandis -->
         <div class="flex gap-2 mb-5">
-            <input type="text" id="weatherCitySearchInput" placeholder="Check weather of another city or mandi (e.g. Kota, Ludhiana, Jaipur)"
+            <input type="text" id="weatherCitySearchInput" placeholder="${cityPlaceholder}"
                 class="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" 
                 onkeydown="if(event.key === 'Enter') searchCustomCityWeather()" />
             <button onclick="searchCustomCityWeather()" 
                 class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm">
                 <i class="fas fa-search"></i>
-                <span>Search</span>
+                <span>${searchLabel}</span>
             </button>
         </div>
 
@@ -1367,13 +1433,13 @@ function updateWeatherModal(weatherData, forecastData = null) {
                 <div>
                     <div class="flex items-baseline gap-2">
                         <span class="text-4xl font-black text-gray-900">${temp}°C</span>
-                        <span class="text-xs font-semibold text-gray-500">Feels like ${feelsLike}°C</span>
+                        <span class="text-xs font-semibold text-gray-500">${feelsLikeLabel} ${feelsLike}°C</span>
                     </div>
-                    <p class="text-sm font-semibold text-blue-900 capitalize mt-0.5">${weatherData.weather[0].description}</p>
+                    <p class="text-sm font-semibold text-blue-900 capitalize mt-0.5">${weatherDesc}</p>
                 </div>
             </div>
             <div class="text-center sm:text-right bg-white px-3 py-2 rounded-lg border border-blue-100 shadow-sm">
-                <p class="text-[10px] font-bold text-gray-500 uppercase">Min / Max Temp</p>
+                <p class="text-[10px] font-bold text-gray-500 uppercase">${minMaxLabel}</p>
                 <p class="text-sm font-extrabold text-gray-800">${Math.round(weatherData.main.temp_min || temp)}°C / ${Math.round(weatherData.main.temp_max || temp)}°C</p>
             </div>
         </div>
@@ -1382,22 +1448,22 @@ function updateWeatherModal(weatherData, forecastData = null) {
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
                 <i class="fas fa-droplet text-blue-500 text-base mb-1"></i>
-                <p class="text-[10px] uppercase font-bold text-gray-500">Relative Humidity</p>
+                <p class="text-[10px] uppercase font-bold text-gray-500">${humidityLabel}</p>
                 <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.main.humidity}%</p>
             </div>
-            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+            <div class="bg-gray-50 p-3 rounded-xl border border-teal-100 text-center">
                 <i class="fas fa-wind text-teal-500 text-base mb-1"></i>
-                <p class="text-[10px] uppercase font-bold text-gray-500">Wind Velocity</p>
+                <p class="text-[10px] uppercase font-bold text-gray-500">${windVelocityLabel}</p>
                 <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.wind.speed} km/h</p>
             </div>
-            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+            <div class="bg-gray-50 p-3 rounded-xl border border-indigo-100 text-center">
                 <i class="fas fa-gauge text-indigo-500 text-base mb-1"></i>
-                <p class="text-[10px] uppercase font-bold text-gray-500">Pressure</p>
+                <p class="text-[10px] uppercase font-bold text-gray-500">${pressureLabel}</p>
                 <p class="text-base font-black text-gray-900 mt-0.5">${weatherData.main.pressure} hPa</p>
             </div>
-            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+            <div class="bg-gray-50 p-3 rounded-xl border border-emerald-100 text-center">
                 <i class="fas fa-eye text-emerald-500 text-base mb-1"></i>
-                <p class="text-[10px] uppercase font-bold text-gray-500">Visibility</p>
+                <p class="text-[10px] uppercase font-bold text-gray-500">${visibilityLabel}</p>
                 <p class="text-base font-black text-gray-900 mt-0.5">${(weatherData.visibility ? (weatherData.visibility / 1000).toFixed(1) : '10')} km</p>
             </div>
         </div>
@@ -1408,7 +1474,7 @@ function updateWeatherModal(weatherData, forecastData = null) {
                 <div class="flex items-center gap-2">
                     <i class="fas fa-sun text-amber-500 text-xl"></i>
                     <div>
-                        <p class="text-[10px] font-bold text-amber-800 uppercase">Sunrise</p>
+                        <p class="text-[10px] font-bold text-amber-800 uppercase">${sunriseLabel}</p>
                         <p class="font-black text-xs text-gray-900">${sunrise}</p>
                     </div>
                 </div>
@@ -1416,7 +1482,7 @@ function updateWeatherModal(weatherData, forecastData = null) {
                 <div class="flex items-center gap-2">
                     <i class="fas fa-moon text-orange-500 text-xl"></i>
                     <div>
-                        <p class="text-[10px] font-bold text-orange-800 uppercase">Sunset</p>
+                        <p class="text-[10px] font-bold text-orange-800 uppercase">${sunsetLabel}</p>
                         <p class="font-black text-xs text-gray-900">${sunset}</p>
                     </div>
                 </div>
@@ -1425,9 +1491,9 @@ function updateWeatherModal(weatherData, forecastData = null) {
             <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 flex items-center gap-2.5">
                 <i class="fas fa-seedling text-emerald-600 text-xl flex-shrink-0"></i>
                 <div>
-                    <p class="text-[10px] font-bold text-emerald-800 uppercase">Spraying Condition</p>
+                    <p class="text-[10px] font-bold text-emerald-800 uppercase">${sprayLabel}</p>
                     <p class="text-xs font-bold text-emerald-900">
-                        ${weatherData.wind.speed < 15 && !condition.includes('Rain') ? '✅ Ideal for fertilizer & pesticide spraying' : '⚠️ Avoid chemical spraying due to wind/rain'}
+                        ${sprayingText}
                     </p>
                 </div>
             </div>
@@ -1436,6 +1502,10 @@ function updateWeatherModal(weatherData, forecastData = null) {
         <!-- 5-Day Forecast -->
         ${forecastCardsHtml}
     `;
+
+    if (window.translateContainer) {
+        window.translateContainer(content, targetLang);
+    }
 }
 
 // Load market data
@@ -1450,7 +1520,7 @@ function loadMarketData() {
         { commodity: 'Sugarcane', modal_price: '3500', market: 'Muzaffarnagar', state: 'Uttar Pradesh' },
         { commodity: 'Maize', modal_price: '1950', market: 'Karnal', state: 'Haryana' }
     ];
-    
+    window.latestMarketData = mockData;
     updateMarketCard(mockData.slice(0, 3));
     updateMarketModal(mockData);
 }
@@ -1459,92 +1529,153 @@ function loadMarketData() {
 function updateMarketCard(marketData) {
     const content = document.getElementById('marketPricesCard');
     if (!content) return;
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
+    const quintalLabel = window.t ? window.t('/Quintal', targetLang) : '/Quintal';
     
-    const items = marketData.slice(0, 3).map(item => `
+    const items = (marketData || []).slice(0, 3).map(item => {
+        const rawComm = item.commodity || item.crop;
+        const comm = window.t ? window.t(rawComm, targetLang) : rawComm;
+        const rawMarket = item.market;
+        const market = window.t ? window.t(rawMarket, targetLang) : rawMarket;
+        return `
         <div class="flex justify-between items-center py-2 border-b">
             <div>
-                <p class="font-medium">${item.commodity || item.crop}</p>
-                <p class="text-sm text-gray-600">${item.market}</p>
+                <p class="font-medium">${comm}</p>
+                <p class="text-sm text-gray-600">${market}</p>
             </div>
             <div class="text-right">
                 <p class="font-bold text-green-600">₹${item.modal_price || item.price}</p>
-                <p class="text-sm text-gray-600">/Quintal</p>
+                <p class="text-sm text-gray-600">${quintalLabel}</p>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     
-    content.innerHTML = items || '<p class="text-gray-500">No data available</p>';
+    content.innerHTML = items || `<p class="text-gray-500">${window.t ? window.t('No data available', targetLang) : 'No data available'}</p>`;
+    if (window.translateContainer) {
+        window.translateContainer(content, targetLang);
+    }
 }
 
 // Update market modal
 function updateMarketModal(marketData) {
     const content = document.getElementById('marketPricesModalContent');
     if (!content) return;
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
     
-    const rows = marketData.map(item => `
+    const cropHeader = window.t ? window.t('Crop', targetLang) : 'Crop';
+    const priceHeader = window.t ? window.t('Price', targetLang) : 'Price';
+    const marketHeader = window.t ? window.t('Market', targetLang) : 'Market';
+    const stateHeader = window.t ? window.t('State', targetLang) : 'State';
+    const noDataText = window.t ? window.t('No market data available', targetLang) : 'No market data available';
+
+    const rows = (marketData || []).map(item => {
+        const rawComm = item.commodity || item.crop;
+        const comm = window.t ? window.t(rawComm, targetLang) : rawComm;
+        const rawMarket = item.market;
+        const market = window.t ? window.t(rawMarket, targetLang) : rawMarket;
+        const rawState = item.state || 'India';
+        const state = window.t ? window.t(rawState, targetLang) : rawState;
+
+        return `
         <tr class="hover:bg-gray-50">
-            <td class="py-3 px-4 font-medium">${item.commodity || item.crop}</td>
+            <td class="py-3 px-4 font-medium">${comm}</td>
             <td class="py-3 px-4 font-bold text-green-600">₹${item.modal_price || item.price}</td>
-            <td class="py-3 px-4">${item.market}</td>
-            <td class="py-3 px-4">${item.state || 'India'}</td>
+            <td class="py-3 px-4">${market}</td>
+            <td class="py-3 px-4">${state}</td>
         </tr>
-    `).join('');
+    `}).join('');
     
     content.innerHTML = `
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
                     <tr class="bg-gray-100">
-                        <th class="py-3 px-4 text-left font-semibold">Crop</th>
-                        <th class="py-3 px-4 text-left font-semibold">Price</th>
-                        <th class="py-3 px-4 text-left font-semibold">Market</th>
-                        <th class="py-3 px-4 text-left font-semibold">State</th>
+                        <th class="py-3 px-4 text-left font-semibold">${cropHeader}</th>
+                        <th class="py-3 px-4 text-left font-semibold">${priceHeader}</th>
+                        <th class="py-3 px-4 text-left font-semibold">${marketHeader}</th>
+                        <th class="py-3 px-4 text-left font-semibold">${stateHeader}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${rows || '<tr><td colspan="4" class="text-center py-4">No market data available</td></tr>'}
+                    ${rows || `<tr><td colspan="4" class="text-center py-4">${noDataText}</td></tr>`}
                 </tbody>
             </table>
         </div>
     `;
+    if (window.translateContainer) {
+        window.translateContainer(content, targetLang);
+    }
 }
 
 // Load seed recommendations
 function loadSeedRecommendations() {
-    if (!currentUser) return;
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
+    const state = currentUser?.state || 'Punjab';
     
-    const state = currentUser.state;
-    const crops = translations[currentLanguage].states[state] || ['Wheat', 'Rice', 'Cotton'];
+    // Get state crops from translations or default
+    const cropsStateMap = (translations[targetLang] && translations[targetLang].states) ||
+                          (translations['hi'] && translations['hi'].states) || {};
+    let crops = cropsStateMap[state] || cropsStateMap['Uttar Pradesh'] || cropsStateMap['Punjab'];
     
-    // Update home page seed tags
-    const seedTags = document.querySelectorAll('#homePage .rounded-full');
-    seedTags.forEach((tag, index) => {
-        if (crops[index]) {
-            tag.textContent = crops[index];
-        }
-    });
+    if (!crops || !Array.isArray(crops)) {
+        crops = ['Wheat', 'Rice', 'Mustard', 'Cotton'];
+    }
+    
+    const localizedCrops = crops.map(c => window.t ? window.t(c, targetLang) : c);
+    
+    // Update home page seed tags in #seedCardTags
+    const seedContainer = document.getElementById('seedCardTags') || document.querySelector('#homePage .dashboard-card:has(#seedTitle)');
+    if (seedContainer) {
+        const seedTags = seedContainer.querySelectorAll('span.rounded-full, .rounded-full');
+        seedTags.forEach((tag, index) => {
+            if (localizedCrops[index]) {
+                tag.textContent = localizedCrops[index];
+            }
+        });
+    }
+
+    // Localize the fertilizerRatio element
+    const ratioEl = document.getElementById('fertilizerRatio');
+    if (ratioEl) {
+        const ratioText = window.t ? window.t('50% Organic | 25% NPK | 25% Urea', targetLang) : '50% Organic | 25% NPK | 25% Urea';
+        ratioEl.textContent = ratioText;
+    }
     
     // Update seed modal
-    updateSeedModal(crops);
+    updateSeedModal(localizedCrops);
 }
 
 // Update seed modal
 function updateSeedModal(crops) {
     const content = document.getElementById('seedModalContent');
     if (!content) return;
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
     
+    const seedRecTitle = window.t ? window.t('Recommended Seeds & Varieties:', targetLang) : 'Recommended Seeds & Varieties:';
+    const fertTitle = window.t ? window.t('Soil & Fertilizer Advisory:', targetLang) : 'Soil & Fertilizer Advisory:';
+    const organicLabel = window.t ? window.t('50% Organic', targetLang) : '50% Organic';
+    const npkLabel = window.t ? window.t('25% NPK', targetLang) : '25% NPK';
+    const ureaLabel = window.t ? window.t('25% Urea', targetLang) : '25% Urea';
+    const tipsTitle = window.t ? window.t('Farming Tips', targetLang) : 'Farming Tips';
+    
+    const tip1 = window.t ? window.t('Sow seeds 2-3 inches deep for best germination', targetLang) : 'Sow seeds 2-3 inches deep for best germination';
+    const tip2 = window.t ? window.t('Water crops in early morning or late evening', targetLang) : 'Water crops in early morning or late evening';
+    const tip3 = window.t ? window.t('Use organic compost to improve soil health', targetLang) : 'Use organic compost to improve soil health';
+    const tip4 = window.t ? window.t('Monitor for pests weekly', targetLang) : 'Monitor for pests weekly';
+    const tip5 = window.t ? window.t('Rotate crops annually', targetLang) : 'Rotate crops annually';
+
     content.innerHTML = `
         <div class="mb-6">
-            <h4 class="font-bold text-lg mb-3">${translations[currentLanguage].seedRecText}</h4>
+            <h4 class="font-bold text-lg mb-3">${seedRecTitle}</h4>
             <div class="flex flex-wrap gap-2">
-                ${crops.map(crop => `
-                    <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full">${crop}</span>
+                ${(crops || []).map(crop => `
+                    <span class="px-4 py-2 bg-green-100 text-green-800 rounded-full font-medium">${crop}</span>
                 `).join('')}
             </div>
         </div>
         
         <div class="mb-6">
-            <h4 class="font-bold text-lg mb-3">${translations[currentLanguage].fertilizerText}</h4>
+            <h4 class="font-bold text-lg mb-3">${fertTitle}</h4>
             <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
                 <div class="h-full flex">
                     <div class="bg-green-500 w-1/2"></div>
@@ -1552,31 +1683,41 @@ function updateSeedModal(crops) {
                     <div class="bg-purple-500 w-1/4"></div>
                 </div>
             </div>
-            <div class="flex justify-between text-sm text-gray-600 mt-2">
-                <span>50% Organic</span>
-                <span>25% NPK</span>
-                <span>25% Urea</span>
+            <div class="flex justify-between text-sm text-gray-600 mt-2 font-medium">
+                <span>${organicLabel}</span>
+                <span>${npkLabel}</span>
+                <span>${ureaLabel}</span>
             </div>
         </div>
         
-        <div class="bg-blue-50 p-4 rounded-lg">
-            <h4 class="font-bold text-lg mb-2">Farming Tips</h4>
-            <ul class="list-disc pl-5 space-y-1">
-                <li>Sow seeds 2-3 inches deep for best germination</li>
-                <li>Water crops in early morning or late evening</li>
-                <li>Use organic compost to improve soil health</li>
-                <li>Monitor for pests weekly</li>
-                <li>Rotate crops annually</li>
+        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
+            <h4 class="font-bold text-lg mb-2 text-blue-900">${tipsTitle}</h4>
+            <ul class="list-disc pl-5 space-y-1.5 text-sm text-gray-800">
+                <li>${tip1}</li>
+                <li>${tip2}</li>
+                <li>${tip3}</li>
+                <li>${tip4}</li>
+                <li>${tip5}</li>
             </ul>
         </div>
     `;
+
+    if (window.translateContainer) {
+        window.translateContainer(content, targetLang);
+    }
 }
 
 // Modal functions
 function openWeatherModal() {
-    document.getElementById('weatherModal').classList.add('active');
+    const modal = document.getElementById('weatherModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
     if (window.latestWeatherData) {
         updateWeatherModal(window.latestWeatherData, window.latestForecastData);
+    }
+    if (window.translateContainer) {
+        window.translateContainer(modal, targetLang);
     }
     if (window.userLocation && window.userLocation.lat && window.userLocation.lon) {
         loadWeatherData(window.userLocation.lat, window.userLocation.lon);
@@ -1586,11 +1727,29 @@ function openWeatherModal() {
 }
 
 function openMarketPricesModal() {
-    document.getElementById('marketPricesModal').classList.add('active');
+    const modal = document.getElementById('marketPricesModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
+    if (window.latestMarketData) {
+        updateMarketModal(window.latestMarketData);
+    } else {
+        loadMarketData();
+    }
+    if (window.translateContainer) {
+        window.translateContainer(modal, targetLang);
+    }
 }
 
 function openSeedModal() {
-    document.getElementById('seedModal').classList.add('active');
+    const modal = document.getElementById('seedModal');
+    if (!modal) return;
+    modal.classList.add('active');
+    const targetLang = currentLanguage || window.currentLanguage || 'hi';
+    loadSeedRecommendations();
+    if (window.translateContainer) {
+        window.translateContainer(modal, targetLang);
+    }
 }
 
 function closeModal(modalId) {
@@ -1630,6 +1789,7 @@ function handleLogout() {
 function changeLanguage(lang) {
     if (!lang) lang = 'hi';
     currentLanguage = lang;
+    window.currentLanguage = lang;
     
     // Save language preference
     localStorage.setItem('agrifarmers_language', lang);
@@ -1656,10 +1816,26 @@ function changeLanguage(lang) {
     // Update date
     updateDate();
     
-    // Update seed recommendations if user is logged in
-    if (currentUser) {
-        loadSeedRecommendations();
+    // Re-render dynamic dashboard and modal content
+    if (window.latestWeatherData) {
+        updateWeatherCard(window.latestWeatherData);
+        updateWeatherModal(window.latestWeatherData, window.latestForecastData);
+        updateFarmingTips(window.latestWeatherData);
     }
+    if (window.latestMarketData) {
+        updateMarketCard(window.latestMarketData);
+        updateMarketModal(window.latestMarketData);
+    } else {
+        loadMarketData();
+    }
+    loadSeedRecommendations();
+    
+    // Re-translate any currently active modals
+    document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+        if (window.translateContainer) {
+            window.translateContainer(modal, lang);
+        }
+    });
     
     // Close language dropdown
     const languageDropdown = document.getElementById('languageDropdown');

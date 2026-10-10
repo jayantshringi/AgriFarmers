@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi" dir="ltr">
 
 <head>
     <meta charset="UTF-8">
@@ -599,7 +599,7 @@
                                 <button onclick="getUserLocation(true)" title="Click to detect exact GPS location"
                                     class="text-xs bg-white text-green-800 hover:bg-green-50 font-bold px-3 py-1.5 rounded-full transition-all shadow-sm inline-flex items-center gap-1.5 active:scale-95">
                                     <i class="fas fa-sync-alt text-green-600 text-xs"></i>
-                                    <span>Update GPS</span>
+                                    <span id="updateGpsBtn">Update GPS</span>
                                 </button>
                             </div>
                         </div>
@@ -674,20 +674,15 @@
                             </div>
                             <div>
                                 <div class="mb-3">
-                                    <p class="font-medium text-sm text-gray-600 mb-1" id="seedRecText">Seed
-                                        Recommendations:</p>
-                                    <div class="flex flex-wrap gap-2">
-                                        <span
-                                            class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Wheat</span>
-                                        <span
-                                            class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Rice</span>
-                                        <span
-                                            class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Cotton</span>
+                                    <p class="font-medium text-sm text-gray-600 mb-1" id="seedRecText">Recommended Seeds & Varieties:</p>
+                                    <div id="seedCardTags" class="flex flex-wrap gap-2">
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Wheat</span>
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Rice</span>
+                                        <span class="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">Cotton</span>
                                     </div>
                                 </div>
                                 <div>
-                                    <p class="font-medium text-sm text-gray-600 mb-1" id="fertilizerText">Fertilizer
-                                        Mix:</p>
+                                    <p class="font-medium text-sm text-gray-600 mb-1" id="fertilizerText">Soil & Fertilizer Advisory:</p>
                                     <div class="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
                                         <div class="h-full flex">
                                             <div class="bg-green-500 w-1/2"></div>
@@ -695,7 +690,7 @@
                                             <div class="bg-purple-500 w-1/4"></div>
                                         </div>
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">50% Organic | 25% NPK | 25% Urea</p>
+                                    <p class="text-xs text-gray-500 mt-1" id="fertilizerRatio">50% Organic | 25% NPK | 25% Urea</p>
                                 </div>
                             </div>
                         </div>
@@ -708,15 +703,11 @@
                         <div>
                             <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <i class="fas fa-brain text-green-600"></i>
-                                <span>Precision Agriculture Hub</span>
+                                <span id="precisionHubTitle">Precision Agriculture Hub</span>
                             </h3>
-                            <p class="text-sm text-gray-600">AI-powered crop health, soil diagnostics, mandi locator &
-                                water planning</p>
+                            <p class="text-sm text-gray-600" id="precisionHubDesc">AI-powered crop health, soil diagnostics, mandi locator & water planning</p>
                         </div>
-                        <span
-                            class="hidden sm:inline-flex text-xs font-bold px-2.5 py-1 bg-green-100 text-green-800 rounded-full border border-green-200">
-                            AgroVision AI v2.0
-                        </span>
+                        <span id="agroVisionBadge" class="hidden sm:inline-flex text-xs font-bold px-2.5 py-1 bg-green-100 text-green-800 rounded-full border border-green-200">AgroVision AI v2.0</span>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -729,18 +720,15 @@
                                     <i class="fas fa-stethoscope"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">Crop Doctor AI</h4>
-                                    <span
-                                        class="text-[10px] font-bold px-2 py-0.5 bg-green-600 text-white rounded-full">AI
-                                        Vision</span>
+                                    <h4 class="font-bold text-gray-900 text-base" id="cropDoctorTitle">Crop Doctor AI</h4>
+                                    <span id="aiVisionBadge" class="text-[10px] font-bold px-2 py-0.5 bg-green-600 text-white rounded-full">AI Vision</span>
                                 </div>
-                                <p class="text-xs text-gray-600 mb-3">Scan leaf photos to diagnose diseases, fungal
-                                    rusts, and get organic/chemical remedies.</p>
+                                <p class="text-xs text-gray-600 mb-3" id="cropDoctorDesc">Scan leaf photos to diagnose diseases, fungal rusts, and get organic/chemical remedies.</p>
                             </div>
                             <button type="button"
                                 class="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fas fa-camera"></i>
-                                <span>Diagnose Leaf</span>
+                                <span id="diagnoseLeafBtn">Diagnose Leaf</span>
                             </button>
                         </div>
 
@@ -753,18 +741,15 @@
                                     <i class="fas fa-flask"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">Soil Prescription</h4>
-                                    <span
-                                        class="text-[10px] font-bold px-2 py-0.5 bg-emerald-600 text-white rounded-full">NPK
-                                        & pH</span>
+                                    <h4 class="font-bold text-gray-900 text-base" id="soilPrescriptionTitle">Soil Prescription</h4>
+                                    <span id="npkPhBadge" class="text-[10px] font-bold px-2 py-0.5 bg-emerald-600 text-white rounded-full">NPK & pH</span>
                                 </div>
-                                <p class="text-xs text-gray-600 mb-3">Calculate exact Urea, DAP, MOP bag doses & 3-stage
-                                    application schedule for your land.</p>
+                                <p class="text-xs text-gray-600 mb-3" id="soilPrescriptionDesc">Calculate exact Urea, DAP, MOP bag doses & 3-stage application schedule for your land.</p>
                             </div>
                             <button type="button"
                                 class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fas fa-calculator"></i>
-                                <span>Calculate Dose</span>
+                                <span id="calcDoseBtn">Calculate Dose</span>
                             </button>
                         </div>
 
@@ -777,18 +762,15 @@
                                     <i class="fas fa-map-location-dot"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">Farm Map & Mandis</h4>
-                                    <span
-                                        class="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded-full">GPS
-                                        Live</span>
+                                    <h4 class="font-bold text-gray-900 text-base" id="farmMapTitle">Farm Map & Mandis</h4>
+                                    <span id="gpsLiveBadge" class="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded-full">GPS Live</span>
                                 </div>
-                                <p class="text-xs text-gray-600 mb-3">Locate nearby APMC Grain Mandis with live rates,
-                                    KVK Soil Labs, and certified seed dealers.</p>
+                                <p class="text-xs text-gray-600 mb-3" id="farmMapDesc">Locate nearby APMC Grain Mandis with live rates, KVK Soil Labs, and certified seed dealers.</p>
                             </div>
                             <button type="button"
                                 class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fas fa-compass"></i>
-                                <span>Explore Map</span>
+                                <span id="exploreMapBtn">Explore Map</span>
                             </button>
                         </div>
 
@@ -801,18 +783,15 @@
                                     <i class="fas fa-faucet-drip"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base">Smart Irrigation</h4>
-                                    <span
-                                        class="text-[10px] font-bold px-2 py-0.5 bg-cyan-600 text-white rounded-full">ET0
-                                        Water</span>
+                                    <h4 class="font-bold text-gray-900 text-base" id="irrigationPlannerTitle">Smart Irrigation</h4>
+                                    <span id="et0WaterBadge" class="text-[10px] font-bold px-2 py-0.5 bg-cyan-600 text-white rounded-full">ET0 Water</span>
                                 </div>
-                                <p class="text-xs text-gray-600 mb-3">FAO-56 Evapotranspiration schedule, tube-well run
-                                    times, and 7-day watering calendar.</p>
+                                <p class="text-xs text-gray-600 mb-3" id="irrigationPlannerDesc">FAO-56 Evapotranspiration schedule, tube-well run times, and 7-day watering calendar.</p>
                             </div>
                             <button type="button"
                                 class="w-full py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm">
                                 <i class="fas fa-droplet"></i>
-                                <span>Plan Water</span>
+                                <span id="planWaterBtn">Plan Water</span>
                             </button>
                         </div>
                     </div>
