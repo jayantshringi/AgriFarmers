@@ -379,8 +379,22 @@ async function handleRequest(req, res) {
 
 if (require.main === module) {
     initDb().then(() => {
-        http.createServer(handleRequest).listen(PORT, () => {
-            console.log(`AgriFarmers server running at http://localhost:${PORT}`);
+        const server = http.createServer(handleRequest);
+        
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                console.error(`\n⚠️  Port ${PORT} is already in use by another process.`);
+                console.log(`👉 Server is already running! Open http://localhost:${PORT} in your browser.`);
+                console.log(`👉 Or kill the process: npx kill-port ${PORT} (or taskkill /F /IM node.exe)\n`);
+            } else {
+                console.error('Server error:', err);
+            }
+            process.exit(1);
+        });
+
+        server.listen(PORT, () => {
+            console.log(`\n🌾 AgriFarmers server running at http://localhost:${PORT}`);
+            console.log(`👉 Open http://localhost:${PORT} in your browser.\n`);
         });
     });
 }
