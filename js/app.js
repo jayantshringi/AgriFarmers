@@ -1868,14 +1868,41 @@ function changeLanguage(lang) {
     showToast(toastMsgMap[lang] || `Language changed to ${langLabel}`, 'success');
 }
 
+// Offline indicator auto-dismiss logic
+let offlineIndicatorTimer = null;
+
+function hideOfflineIndicator() {
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    if (!offlineIndicator) return;
+    offlineIndicator.classList.remove('show');
+    offlineIndicator.classList.add('fade-out');
+    if (offlineIndicatorTimer) {
+        clearTimeout(offlineIndicatorTimer);
+        offlineIndicatorTimer = null;
+    }
+}
+
+function showOfflineIndicator() {
+    const offlineIndicator = document.getElementById('offlineIndicator');
+    if (!offlineIndicator) return;
+    offlineIndicator.classList.remove('fade-out');
+    offlineIndicator.classList.add('show');
+
+    if (offlineIndicatorTimer) {
+        clearTimeout(offlineIndicatorTimer);
+    }
+    // Automatically fades out after 4.5 seconds
+    offlineIndicatorTimer = setTimeout(() => {
+        hideOfflineIndicator();
+    }, 4500);
+}
+
 // Update online status
 function updateOnlineStatus() {
-    const offlineIndicator = document.getElementById('offlineIndicator');
     if (!navigator.onLine) {
-        offlineIndicator.classList.add('show');
-        showToast('You are offline. Some features may be limited.', 'info');
+        showOfflineIndicator();
     } else {
-        offlineIndicator.classList.remove('show');
+        hideOfflineIndicator();
         if (isOnline === false) {
             showToast('You are back online!', 'success');
         }
@@ -1893,6 +1920,8 @@ window.openMarketPricesModal = openMarketPricesModal;
 window.openSeedModal = openSeedModal;
 window.closeModal = closeModal;
 window.handleLogout = handleLogout;
+window.hideOfflineIndicator = hideOfflineIndicator;
+window.showOfflineIndicator = showOfflineIndicator;
 window.changeLanguage = changeLanguage;
 window.updateUserInfo = updateUserInfo;
 window.getUserLocation = getUserLocation;
