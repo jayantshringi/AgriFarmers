@@ -3,6 +3,10 @@
 /* (Tailwind CSS provides all core utilities and layout)                         */
 /* ═════════════════════════════════════════════════════════════════════════════ */
 
+#agroVisionBadge {
+    display: none !important;
+}
+
 /* Loading screen styles */
 #loadingScreen {
     position: fixed;

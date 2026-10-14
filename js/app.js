@@ -265,6 +265,10 @@ if (document.readyState === 'loading') {
 
 // Simple initialization
 function initApp() {
+    // Remove legacy agroVisionBadge element if present from cached DOM
+    const agroBadge = document.getElementById('agroVisionBadge');
+    if (agroBadge) agroBadge.remove();
+
     // Set current date
     updateDate();
 
