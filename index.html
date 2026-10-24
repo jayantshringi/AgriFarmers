@@ -415,8 +415,8 @@
 
                     <div class="space-y-6">
                         <div>
-                            <label class="block text-gray-700 mb-2" id="mobileLabel">Mobile Number</label>
-                            <input type="tel" id="loginMobile"
+                            <label class="block text-gray-700 mb-2" id="mobileLabel" for="loginMobile">Mobile Number</label>
+                            <input type="tel" id="loginMobile" name="loginMobile" autocomplete="tel"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                                 placeholder="Enter 10-digit mobile number" maxlength="10">
                             <div id="loginMobileError" class="text-red-500 text-sm mt-1 hidden"></div>
@@ -444,16 +444,16 @@
 
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-gray-700 mb-2" id="nameLabel">Full Name</label>
-                            <input type="text" id="signUpName"
+                            <label class="block text-gray-700 mb-2" id="nameLabel" for="signUpName">Full Name</label>
+                            <input type="text" id="signUpName" name="signUpName" autocomplete="name"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                                 placeholder="Enter your full name">
                             <div id="signUpNameError" class="text-red-500 text-sm mt-1 hidden"></div>
                         </div>
 
                         <div>
-                            <label class="block text-gray-700 mb-2" id="mobileLabel2">Mobile Number</label>
-                            <input type="tel" id="signUpMobile"
+                            <label class="block text-gray-700 mb-2" id="mobileLabel2" for="signUpMobile">Mobile Number</label>
+                            <input type="tel" id="signUpMobile" name="signUpMobile" autocomplete="tel"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
                                 placeholder="Enter 10-digit mobile number" maxlength="10">
                             <div id="signUpMobileError" class="text-red-500 text-sm mt-1 hidden"></div>
@@ -468,8 +468,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-gray-700 mb-2" id="stateLabel">State</label>
-                            <select id="signUpState"
+                            <label class="block text-gray-700 mb-2" id="stateLabel" for="signUpState">State</label>
+                            <select id="signUpState" name="signUpState"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
                                 <option value="" id="selectState">Select State</option>
                                 <optgroup label="States (28)">
@@ -517,8 +517,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-gray-700 mb-2" id="districtLabel">District</label>
-                            <select id="signUpDistrict"
+                            <label class="block text-gray-700 mb-2" id="districtLabel" for="signUpDistrict">District</label>
+                            <select id="signUpDistrict" name="signUpDistrict"
                                 class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors">
                                 <option value="" id="selectDistrict">Select District</option>
                             </select>
@@ -948,8 +948,8 @@
 
                     <!-- Crop Selector & Live Camera Modal (if active) -->
                     <div class="flex items-center gap-3 mb-4">
-                        <label class="text-xs font-bold text-gray-700 whitespace-nowrap">Target Crop:</label>
-                        <select id="cdCropSelect"
+                        <label class="text-xs font-bold text-gray-700 whitespace-nowrap" for="cdCropSelect">Target Crop:</label>
+                        <select id="cdCropSelect" name="cdCropSelect"
                             class="flex-1 px-3 py-2 text-sm bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 font-medium">
                             <option value="Wheat">🌾 Wheat (गेंहू)</option>
                             <option value="Rice">🍚 Rice / Paddy (धान)</option>
@@ -976,7 +976,7 @@
                     <!-- Upload Zone -->
                     <div id="cdUploadZone"
                         class="border-2 border-dashed border-green-300 bg-green-50/40 hover:bg-green-50 rounded-2xl p-6 text-center transition-all">
-                        <input type="file" id="cdFileInput" accept="image/*" class="hidden"
+                        <input type="file" id="cdFileInput" name="cdFileInput" aria-label="Upload crop leaf photo" accept="image/*" class="hidden"
                             onchange="window.AgroVisionDoctor.handleFileSelected(event)" />
                         <div
                             class="w-16 h-16 rounded-full bg-green-100 text-green-600 mx-auto flex items-center justify-center text-2xl mb-3 shadow-inner">
@@ -1169,8 +1169,8 @@
                     <div
                         class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5 bg-gray-50 p-4 rounded-xl border border-gray-200">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Target Crop:</label>
-                            <select id="spCropSelect" onchange="window.AgroVisionSoil.onCropChange(this.value)"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="spCropSelect">Target Crop:</label>
+                            <select id="spCropSelect" name="spCropSelect" onchange="window.AgroVisionSoil.onCropChange(this.value)"
                                 class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-800">
                                 <option value="Wheat">🌾 Wheat (गेंहू)</option>
                                 <option value="Rice">🍚 Rice / Paddy (धान)</option>
@@ -1185,8 +1185,8 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Total Land Area (Acres):</label>
-                            <input type="number" id="spAreaInput" min="0.1" max="500" step="0.5" value="2.0"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="spAreaInput">Total Land Area (Acres):</label>
+                            <input type="number" id="spAreaInput" name="spAreaInput" min="0.1" max="500" step="0.5" value="2.0"
                                 oninput="window.AgroVisionSoil.onSliderChange('area', this.value)"
                                 class="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 font-semibold text-gray-800" />
                         </div>
@@ -1197,10 +1197,10 @@
                         <!-- Nitrogen -->
                         <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-bold text-gray-700">Nitrogen (N)</span>
+                                <label class="text-xs font-bold text-gray-700 cursor-pointer" for="spSliderN">Nitrogen (N)</label>
                                 <span id="spBadgeN" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
                             </div>
-                            <input type="range" id="spSliderN" min="0" max="250" value="80"
+                            <input type="range" id="spSliderN" name="spSliderN" aria-label="Nitrogen level" min="0" max="250" value="80"
                                 oninput="window.AgroVisionSoil.onSliderChange('n', this.value)"
                                 class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
                             <p id="spValN" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">80
@@ -1210,10 +1210,10 @@
                         <!-- Phosphorus -->
                         <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-bold text-gray-700">Phosphorus (P)</span>
+                                <label class="text-xs font-bold text-gray-700 cursor-pointer" for="spSliderP">Phosphorus (P)</label>
                                 <span id="spBadgeP" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
                             </div>
-                            <input type="range" id="spSliderP" min="0" max="150" value="50"
+                            <input type="range" id="spSliderP" name="spSliderP" aria-label="Phosphorus level" min="0" max="150" value="50"
                                 oninput="window.AgroVisionSoil.onSliderChange('p', this.value)"
                                 class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
                             <p id="spValP" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">50
@@ -1223,10 +1223,10 @@
                         <!-- Potassium -->
                         <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-bold text-gray-700">Potassium (K)</span>
+                                <label class="text-xs font-bold text-gray-700 cursor-pointer" for="spSliderK">Potassium (K)</label>
                                 <span id="spBadgeK" class="text-xs font-bold px-2 py-0.5 rounded-full"></span>
                             </div>
-                            <input type="range" id="spSliderK" min="0" max="150" value="60"
+                            <input type="range" id="spSliderK" name="spSliderK" aria-label="Potassium level" min="0" max="150" value="60"
                                 oninput="window.AgroVisionSoil.onSliderChange('k', this.value)"
                                 class="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
                             <p id="spValK" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">60
@@ -1236,10 +1236,10 @@
                         <!-- Soil pH -->
                         <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm">
                             <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-bold text-gray-700">Soil pH</span>
+                                <label class="text-xs font-bold text-gray-700 cursor-pointer" for="spSliderPH">Soil pH</label>
                                 <span id="spBadgePH" class="text-xs font-bold"></span>
                             </div>
-                            <input type="range" id="spSliderPH" min="3.5" max="10.5" step="0.1" value="6.5"
+                            <input type="range" id="spSliderPH" name="spSliderPH" aria-label="Soil pH level" min="3.5" max="10.5" step="0.1" value="6.5"
                                 oninput="window.AgroVisionSoil.onSliderChange('ph', this.value)"
                                 class="w-full h-1.5 bg-gradient-to-r from-red-400 via-green-400 to-purple-400 rounded-lg appearance-none cursor-pointer accent-emerald-600" />
                             <p id="spValPH" class="text-center text-xs font-bold font-mono text-emerald-700 mt-1">6.5
@@ -1356,7 +1356,8 @@
                             Custom Machinery</button>
                     </div>
                     <div class="relative w-full sm:w-64">
-                        <input type="text" id="mapSearchInput" placeholder="Search Mandi or commodity..."
+                        <label for="mapSearchInput" class="sr-only">Search Mandi or commodity</label>
+                        <input type="text" id="mapSearchInput" name="mapSearchInput" aria-label="Search Mandi or commodity" placeholder="Search Mandi or commodity..."
                             oninput="window.AgroVisionMap.onSearchInput(this.value)"
                             class="w-full pl-8 pr-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-500" />
                         <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
@@ -1405,8 +1406,8 @@
                     <div
                         class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5 bg-gray-50 p-4 rounded-xl border border-gray-200">
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Crop Type:</label>
-                            <select id="ipCropSelect"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipCropSelect">Crop Type:</label>
+                            <select id="ipCropSelect" name="ipCropSelect"
                                 onchange="window.AgroVisionIrrigation.onInputChange('crop', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
                                 <option value="Wheat">🌾 Wheat (Kc: 1.15)</option>
@@ -1421,8 +1422,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Growth Stage:</label>
-                            <select id="ipStageSelect"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipStageSelect">Growth Stage:</label>
+                            <select id="ipStageSelect" name="ipStageSelect"
                                 onchange="window.AgroVisionIrrigation.onInputChange('stage', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
                                 <option value="initial">🌱 Initial / Sowing</option>
@@ -1432,8 +1433,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Soil Texture:</label>
-                            <select id="ipSoilSelect"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipSoilSelect">Soil Texture:</label>
+                            <select id="ipSoilSelect" name="ipSoilSelect"
                                 onchange="window.AgroVisionIrrigation.onInputChange('soil', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
                                 <option value="Loam" selected>Loam (Optimal Retention)</option>
@@ -1445,8 +1446,8 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Irrigation System:</label>
-                            <select id="ipMethodSelect"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipMethodSelect">Irrigation System:</label>
+                            <select id="ipMethodSelect" name="ipMethodSelect"
                                 onchange="window.AgroVisionIrrigation.onInputChange('method', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 font-semibold">
                                 <option value="drip" selected>💧 Drip (90% Efficiency)</option>
@@ -1456,15 +1457,15 @@
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Land Area (Acres):</label>
-                            <input type="number" id="ipAreaInput" min="0.1" max="100" step="0.5" value="2.0"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipAreaInput">Land Area (Acres):</label>
+                            <input type="number" id="ipAreaInput" name="ipAreaInput" min="0.1" max="100" step="0.5" value="2.0"
                                 oninput="window.AgroVisionIrrigation.onInputChange('area', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg font-semibold" />
                         </div>
 
                         <div>
-                            <label class="block text-xs font-bold text-gray-700 mb-1">Avg Temperature (°C):</label>
-                            <input type="number" id="ipTempInput" min="5" max="50" step="1" value="26"
+                            <label class="block text-xs font-bold text-gray-700 mb-1" for="ipTempInput">Avg Temperature (°C):</label>
+                            <input type="number" id="ipTempInput" name="ipTempInput" min="5" max="50" step="1" value="26"
                                 oninput="window.AgroVisionIrrigation.onInputChange('temp', this.value)"
                                 class="w-full px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-lg font-semibold" />
                         </div>

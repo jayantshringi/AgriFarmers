@@ -738,6 +738,11 @@ function initOTPInputs() {
         input.maxLength = 1;
         input.className = 'otp-digit';
         input.dataset.index = i;
+        input.id = 'otpDigit_' + i;
+        input.name = 'otp_' + i;
+        input.setAttribute('aria-label', 'Digit ' + (i + 1));
+        input.autocomplete = i === 0 ? 'one-time-code' : 'off';
+        input.inputMode = 'numeric';
         
         input.addEventListener('input', function(e) {
             // Only allow numbers
