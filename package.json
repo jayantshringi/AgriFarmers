@@ -5,17 +5,12 @@
   "description": "AgriFarmers prototype with TextBee OTP and Supabase support",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build:css": "tailwindcss -c ./tailwind.config.js -o ./css/tailwind.min.css --minify",
-    "build": "tailwindcss -c ./tailwind.config.js -o ./css/tailwind.min.css --minify"
+    "dev": "node server.js"
   },
   "engines": {
     "node": "24.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4"
-  },
-  "devDependencies": {
-    "tailwindcss": "^3.4.17"
   }
 }
