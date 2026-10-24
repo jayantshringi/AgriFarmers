@@ -1,0 +1,14 @@
+# AgriFarmers
+
+> Precision Agriculture & Smart Farming Companion for Indian farmers. Real-time crop diagnosis, mandi rates, soil health analysis, and weather advisory in 13 regional languages.
+
+## Project Summary
+AgriFarmers empowers Indian farmers with:
+- AI Crop Doctor for leaf disease identification
+- ICAR Precision Fertilizer Calculator & Soil Health Prescriptions
+- Geospatial Facility Map for KVKs, Soil Testing Labs, and APMC Mandis
+- Smart Evapotranspiration (ET0) Irrigation Planning with 7-day water scheduling
+- Multi-lingual support across 13 Indian native languages
+
+## Canonical Links
+- [Web Application](https://agrifarmers.vercel.app/)
