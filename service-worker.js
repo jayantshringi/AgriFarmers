@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v6.7
-const CACHE_NAME = 'agrifarmers-v6.7';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v6.7';
+// AgriFarmers Service Worker v6.8
+const CACHE_NAME = 'agrifarmers-v6.8';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v6.8';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -30,7 +30,7 @@ const STATIC_ASSETS = [
 
 // Install event
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v6.1...');
+  console.log('[Service Worker] Installing v6.8...');
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
@@ -47,7 +47,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v6.1...');
+  console.log('[Service Worker] Activating v6.8...');
   
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -66,7 +66,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch event - Cache First strategy
+// Fetch event - Network-First for Navigation, Cache-First for static assets
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
@@ -75,6 +75,22 @@ self.addEventListener('fetch', (event) => {
 
   // Always bypass API requests to ensure fresh dynamic backend responses
   if (event.request.url.includes('/api/')) {
+    return;
+  }
+
+  // HTML navigation requests: Network-First with Cache fallback for instant updates
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((res) => res || caches.match('./index.html')))
+    );
     return;
   }
 
