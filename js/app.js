@@ -4,6 +4,7 @@ window.__AGRIFARMERS_APP_LOADED__ = true;
 // ── PWA Core Variables ────────────────────────────────────────────────────────
 let deferredPrompt = null;
 let isAppInstalled = false;
+let offlineIndicatorTimer = null;
 
 // Check if app is already installed
 function checkIfAppIsInstalled() {
@@ -1872,8 +1873,6 @@ function changeLanguage(lang) {
 }
 
 // Offline indicator auto-dismiss logic
-let offlineIndicatorTimer = null;
-
 function hideOfflineIndicator() {
     const offlineIndicator = document.getElementById('offlineIndicator');
     if (!offlineIndicator) return;
