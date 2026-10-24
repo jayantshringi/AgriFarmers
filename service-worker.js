@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v6.6
-const CACHE_NAME = 'agrifarmers-v6.6';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v6.6';
+// AgriFarmers Service Worker v6.7
+const CACHE_NAME = 'agrifarmers-v6.7';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v6.7';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
   './index.html',
   './manifest.json',
   './css/styles.css',
+  './css/tailwind.min.css',
   './styles.css',
   './js/app.js',
   './script.js',
@@ -23,7 +24,6 @@ const STATIC_ASSETS = [
   './icons/icon-192x192.png',
   './icons/icon-512x512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  'https://cdn.tailwindcss.com',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
