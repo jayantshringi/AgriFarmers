@@ -24,7 +24,7 @@
 
 - [About The Project](#-about-the-project)
 - [Key Features](#-key-features)
-- [AgroVision Precision Suite](#-agrovision-precision-suite)
+- [AgriFarm-Vision Precision Suite](#-agrifarm-vision-precision-suite)
 - [Tech Stack](#-tech-stack)
 - [Project Architecture & Directory Structure](#-project-architecture--directory-structure)
 - [Progressive Web App (PWA) & Offline Mode](#-progressive-web-app-pwa--offline-mode)
@@ -40,9 +40,9 @@
 
 ### Core Objectives:
 - **Data-Driven Farming**: Deliver location-accurate weather updates, soil-specific fertilizer mixes, and regional seed advice.
-- **Precision Diagnostics (AgroVision)**: Enable instant leaf disease identification, scientific remediation plans, and smart irrigation scheduling.
+- **Precision Diagnostics (AgriFarm-Vision / AgroVision)**: Enable instant leaf disease identification, scientific remediation plans, dynamic ICAR soil prescriptions, and smart FAO-56 irrigation scheduling.
 - **Market Transparency**: Provide real-time local Mandi prices and predictive price forecasts to help farmers sell produce at optimal rates.
-- **Accessibility & Inclusivity**: Easy toggling between English, Hindi, and Punjabi with intuitive icons and high-contrast visual design.
+- **Accessibility & Inclusivity**: Easy switching across 13 Indian native languages (English, Hindi, Punjabi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, Malayalam, Odia, Assamese, and Urdu) with intuitive icons and high-contrast visual design.
 - **Zero-Friction Authentication**: Passwordless login using SMS OTP via mobile numbers.
 - **Offline Reliability**: Progressive Web App capabilities ensure core features remain accessible even with unstable rural internet connectivity.
 
@@ -50,21 +50,22 @@
 
 ## ✨ Key Features
 
-- 🗣️ **Multi-Lingual Interface**: Instant switching between **English**, **Hindi (हिंदी)**, and **Punjabi (ਪੰਜਾਬੀ)** across all 28 Indian States & Union Territories.
-- 📱 **Progressive Web App (PWA)**: Installable directly on Android, iOS, and Desktop home screens with offline caching (Service Worker v6.1) and standalone display.
+- 🗣️ **All-India Multi-Lingual Interface**: Instant switching across **13 official native languages** (English, Hindi, Punjabi, Bengali, Marathi, Telugu, Tamil, Gujarati, Kannada, Malayalam, Odia, Assamese, and Urdu) covering all 28 States & 8 Union Territories with automatic state-based language matching.
+- 📱 **Progressive Web App (PWA)**: Installable directly on Android, iOS, and Desktop home screens with offline caching (Service Worker v6.5) and standalone display.
 - 🔐 **SMS OTP Authentication**: Secure SMS-based login and signup powered by **TextBee Gateway API** with HMAC-SHA256 hashed OTP tokens, 120-second expiration, rate-limiting, and attempt caps.
 - 🗄️ **Persistent User Profiles**: Integrated Node.js + **Supabase PostgreSQL** storage (`users` table) with silent fallback to browser `localStorage` when offline.
 - 🌦️ **Weather Forecast & Location Intelligence**: Geolocation-driven weather tracking with regional forecasts and tailored daily farming tips.
 - 🌱 **Smart Seed & Fertilizer Advice**: Dynamic recommendations for crops (Wheat, Rice, Cotton, etc.) and optimal organic vs. NPK fertilizer ratios based on the user's state and district.
 - 📊 **Mandi Market Prices & Forecasts**: Real-time crop price tracking and daily price trends for agricultural produce across major Indian markets.
+- 🔬 **AgriFarm-Vision Precision AI Suite**: Built-in precision agriculture tools formerly known as AgroVision, providing crop disease detection, soil testing, irrigation math, and GIS farm mapping.
 
 ---
 
-## 🌿 AgroVision Precision Suite
+## 🌿 AgriFarm-Vision Precision Suite
 
-AgriFarmers includes an isolated, high-performance precision agriculture toolset:
+AgriFarmers includes **AgriFarm-Vision** (also referenced as **AgroVision**), an isolated, high-performance precision agriculture toolset:
 
-1. 🩺 **Crop Doctor (Leaf Disease Diagnosis Engine)**:
+1. 🩺 **Crop Doctor (AgriFarm-Vision Leaf Disease Diagnosis Engine)**:
    - Instant visual leaf pathology diagnosis for **Wheat**, **Rice**, **Cotton**, and **Tomato**, plus healthy crop baselines.
    - Covers critical pathogens: Yellow Rust, Leaf Rust, Powdery Mildew, Bacterial Leaf Blight, Blast, Leaf Curl Virus, Early/Late Blight.
    - Detailed treatment prescriptions: scientific name, symptoms, organic/bio-remedies (Neem NSKE, *Trichoderma*, sour buttermilk), chemical controls (Tilt, Folicur, Mancozeb), and preventive practices.
@@ -92,8 +93,8 @@ AgriFarmers includes an isolated, high-performance precision agriculture toolset
 | **Frontend** | HTML5, CSS3, Vanilla JS (ES6+) | Lightweight, high-performance core web stack with zero build toolchain bloat |
 | **Styling** | Tailwind CSS, Font Awesome, `css/styles.css` | Modern visual design system with Indian flag accents & micro-animations |
 | **GIS Mapping** | Leaflet.js (v1.9.4) & OpenStreetMap | Geospatial facility locator with custom pin markers and interactive popups |
-| **PWA Engine** | Service Worker (v6.1), Web Manifest | Cache-First offline fallback, full asset precaching including AgroVision, install prompts |
-| **Backend API** | Modular Node.js (`node:http`, `node:crypto`) | Lightweight REST API organized into `routes/otp.js`, `routes/users.js`, `routes/agrovision.js` |
+| **PWA Engine** | Service Worker (v6.5), Web Manifest | Cache-First offline fallback, full asset precaching including AgriFarm-Vision (AgroVision), install prompts |
+| **Backend API** | Modular Node.js (`node:http`, `node:crypto`) | Lightweight REST API organized into `routes/otp.js`, `routes/users.js`, `routes/agrovision.js` (AgriFarm-Vision engine) |
 | **Serverless Deployment** | Vercel Serverless Functions (`api/index.js`) | Single-origin fullstack deployment with edge asset caching & URL rewrites |
 | **Database** | Supabase PostgreSQL (`@supabase/supabase-js`) | Relational persistence with connection pooling, user profiles, and timestamps |
 | **SMS Gateway** | TextBee Android Gateway API | Server-side SMS dispatch for 6-digit OTP verification |
@@ -115,23 +116,23 @@ AgriFarmers/
 │   ├── auth.js                # Auth service layer (stateless OTP token, Supabase CRUD)
 │   ├── auth-ui.js             # Authentication UI event listeners & form validators
 │   ├── storage.js             # LocalStorage session caching utilities
-│   ├── translations.js        # Multi-lingual translation dictionaries (EN, HI, PA)
-│   └── features/              # Modular AgroVision precision agriculture client modules
-│       ├── crop-doctor.js     # AgroVision Leaf Disease Diagnosis client module
-│       ├── farm-map.js        # AgroVision Leaflet GIS Interactive Farm & Facility Map
-│       ├── irrigation-planner.js # AgroVision FAO-56 Smart ET0 Irrigation Planner
-│       └── soil-prescription.js # AgroVision Precision Soil Lab & Dynamic NPK Calculator
+│   ├── translations.js        # Multi-lingual translation engine (13 Indian native languages)
+│   └── features/              # Modular AgriFarm-Vision (AgroVision) precision agriculture client modules
+│       ├── crop-doctor.js     # AgriFarm-Vision Leaf Disease Diagnosis client module
+│       ├── farm-map.js        # AgriFarm-Vision Leaflet GIS Interactive Farm & Facility Map
+│       ├── irrigation-planner.js # AgriFarm-Vision FAO-56 Smart ET0 Irrigation Planner
+│       └── soil-prescription.js # AgriFarm-Vision Precision Soil Lab & Dynamic NPK Calculator
 ├── routes/
 │   ├── otp.js                 # Modular TextBee SMS OTP dispatch & HMAC verification
 │   ├── users.js               # Modular Supabase user profile CRUD & last_login updates
-│   └── agrovision.js          # Precision agriculture AI diagnostics & calculations
+│   └── agrovision.js          # AgriFarm-Vision backend precision engine (disease, soil, market forecast)
 ├── icons/                     # Centralized PWA app icons (16x16 up to 512x512)
 ├── screenshots/               # Application UI preview images
 ├── index.html                 # Main application single-page interface & modals
 ├── install.html               # Dedicated PWA installation page
 ├── script.js                  # Root backward-compatibility loader (delegates to js/app.js)
 ├── styles.css                 # Root backward-compatibility stylesheet (@import css/styles.css)
-├── service-worker.js          # PWA Service Worker (Cache-First strategy v6.1, /api bypass)
+├── service-worker.js          # PWA Service Worker (Cache-First strategy v6.5, /api bypass)
 ├── manifest.json              # Web App Manifest (icons, theme colors, display modes)
 ├── server.js                  # Dual-mode backend API & static HTTP server (Vercel & Node.js)
 ├── vercel.json                # Vercel deployment rewrites and caching headers
@@ -173,7 +174,7 @@ AgriFarmers is configured for single-project deployment on **Vercel** with zero 
 
 AgriFarmers complies with modern PWA standards:
 
-1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v6.1`) to precache static HTML, CSS, JavaScript, icons, AgroVision feature modules, and CDN assets for full offline usability while bypassing dynamic `/api/` calls.
+1. **Service Worker Caching**: [`service-worker.js`](file:///d:/Projects/AgriFarmers/service-worker.js) uses a **Cache-First strategy** (`agrifarmers-static-v6.5`) to precache static HTML, CSS, JavaScript, icons, AgriFarm-Vision feature modules, and CDN assets for full offline usability while bypassing dynamic `/api/` calls.
 2. **Installability**: Meets Chrome/Edge Web App criteria. Displays an interactive install prompt or banner.
 3. **PWA Diagnostics**: Test app status directly from the UI using `diagnosePWA()` or `forcePWAInstall()`.
 4. **Dedicated Install Page**: Visit [`install.html`](file:///d:/Projects/AgriFarmers/install.html) for step-by-step device installation guides.
@@ -182,17 +183,23 @@ AgriFarmers complies with modern PWA standards:
 
 ## 🗣️ Multi-Language Support
 
-All UI text is centralized in [`js/translations.js`](file:///d:/Projects/AgriFarmers/js/translations.js). 
+All UI text is centralized in [`js/translations.js`](file:///d:/Projects/AgriFarmers/js/translations.js), offering full localization across **13 official Indian native languages**:
 
-To add a new language key or expand language dictionaries:
-```js
-window.translations = {
-    en: { appName: "AgriFarmers", ... },
-    hi: { appName: "एग्रीफार्मर्स", ... },
-    pa: { appName: "ਐਗਰੀਫਾਰਮਰਜ਼", ... }
-};
-```
-Elements with matching `id` attributes are translated dynamically upon language selection.
+- 🇬🇧 **English (`en`)**
+- 🇮🇳 **Hindi (`hi`)** — हिंदी
+- 🇮🇳 **Punjabi (`pa`)** — ਪੰਜਾਬੀ
+- 🇮🇳 **Bengali (`bn`)** — বাংলা
+- 🇮🇳 **Marathi (`mr`)** — मराठी
+- 🇮🇳 **Telugu (`te`)** — తెలుగు
+- 🇮🇳 **Tamil (`ta`)** — தமிழ்
+- 🇮🇳 **Gujarati (`gu`)** — ગુજરાતી
+- 🇮🇳 **Kannada (`kn`)** — ಕನ್ನಡ
+- 🇮🇳 **Malayalam (`ml`)** — മലയാളം
+- 🇮🇳 **Odia (`or`)** — ଓଡ଼ିଆ
+- 🇮🇳 **Assamese (`as`)** — অসমীয়া
+- 🇮🇳 **Urdu (`ur`)** — اردو (with native RTL bidirectional rendering)
+
+The platform features automatic state-to-language matching based on regional territory, non-destructive deep DOM node tree translation preserving icon elements, and localized calendar and crop advisories.
 
 ---
 
