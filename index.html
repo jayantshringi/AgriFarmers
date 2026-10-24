@@ -3,9 +3,24 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>AgriFarmers - Farming Companion</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AgriFarmers - Precision Agriculture & Smart Farming Companion</title>
+    <meta name="description" content="AgriFarmers - Precision Agriculture & Smart Farming Companion for Indian farmers. Real-time crop diagnosis, mandi rates, soil health analysis, and weather advisory in 13 regional languages.">
+    <link rel="canonical" href="https://agrifarmers.vercel.app/">
+
+    <!-- Preconnect & DNS-Prefetch for Fast CDN Asset Loading -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="dns-prefetch" href="https://unpkg.com">
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:title" content="AgriFarmers - Precision Agriculture & Smart Farming Companion">
+    <meta property="og:description" content="Empowering Indian farmers with real-time crop disease diagnosis, live mandi prices, soil testing advisory, and precision irrigation in 13 languages.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://agrifarmers.vercel.app/">
 
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#138808">
@@ -33,19 +48,21 @@
     <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16x16.png">
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <!-- Font Awesome (Async/Preload) -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></noscript>
 
-    <!-- Leaflet Map CSS & JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet Map CSS & JS (Deferred / Non-blocking) -->
+    <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""></noscript>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/app-config.js"></script>
+    <script src="./js/app-config.js" defer></script>
 
     <!-- TextBee OTP + LocalStorage profile module (loaded as ES module) -->
     <script type="module">
@@ -92,26 +109,21 @@
         </div>
     </div>
 
-    <!-- Loading Screen -->
-    <div id="loadingScreen">
+    <!-- Loading Screen (Non-blocking fallback) -->
+    <div id="loadingScreen" style="display: none;">
         <div class="loader"></div>
-        <p class="mt-4 text-gray-600 text-lg">Loading AgriFarmers...</p>
+        <p class="mt-4 text-gray-700 text-lg font-medium">Loading AgriFarmers...</p>
     </div>
 
-    <!-- PWA Install Button
-    <button id="installButton" class="hidden" title="Install AgriFarmers">
-        <i class="fas fa-download text-xl"></i>
-    </button> -->
-
-    <!-- App Container -->
-    <div id="app" class="min-h-screen" style="display: none;">
+    <!-- App Container (Rendered immediately for fast FCP/LCP) -->
+    <div id="app" class="min-h-screen">
         <!-- Header -->
         <nav class="bg-white shadow-md sticky top-0 z-50">
             <div class="container mx-auto px-4 py-3">
                 <div class="flex justify-between items-center">
                     <!-- Logo -->
                     <div class="flex items-center space-x-3">
-                        <i class="fas fa-seedling text-green-600 text-2xl"></i>
+                        <i class="fas fa-seedling text-green-700 text-2xl"></i>
                         <span class="text-xl font-bold text-gray-800" id="appName">AgriFarmers</span>
                     </div>
 
@@ -121,18 +133,18 @@
                         <div class="relative">
                             <button id="languageButton" type="button" aria-label="Select Regional Language"
                                 class="flex items-center space-x-2 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm bg-white">
-                                <i class="fas fa-globe text-green-600"></i>
+                                <i class="fas fa-globe text-green-700"></i>
                                 <span id="currentLanguage" class="font-bold text-sm">हिंदी</span>
-                                <i class="fas fa-chevron-down text-xs ml-1 text-gray-400"></i>
+                                <i class="fas fa-chevron-down text-xs ml-1 text-gray-500"></i>
                             </button>
                             <div id="languageDropdown"
                                 class="absolute right-0 mt-2 w-72 max-h-96 overflow-y-auto bg-white border border-gray-200 rounded-2xl shadow-2xl hidden z-50 divide-y divide-gray-100 p-1.5 scrollbar-thin">
                                 <div class="px-3 py-2 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl mb-1 border border-green-100">
-                                    <p class="text-[11px] font-bold text-green-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <i class="fas fa-language text-green-600"></i>
+                                    <p class="text-[11px] font-bold text-green-950 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="fas fa-language text-green-700"></i>
                                         <span>Indian State Native Languages (13)</span>
                                     </p>
-                                    <p class="text-[10px] text-green-700">अपनी राज्य भाषा चुनें / Select State Language</p>
+                                    <p class="text-[10px] text-green-900 font-medium">अपनी राज्य भाषा चुनें / Select State Language</p>
                                 </div>
                                 <div class="space-y-0.5">
                                     <!-- 1. English -->
@@ -142,10 +154,10 @@
                                             <span class="text-base">🇬🇧</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">English</p>
-                                                <p class="text-[10px] text-gray-500">Universal / Official</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Universal / Official</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 2. Hindi -->
                                     <button onclick="changeLanguage('hi')" data-lang="hi"
@@ -154,10 +166,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">हिंदी (Hindi)</p>
-                                                <p class="text-[10px] text-gray-500">UP, MP, Bihar, Raj, Del, HR, UK</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">UP, MP, Bihar, Raj, Del, HR, UK</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 3. Punjabi -->
                                     <button onclick="changeLanguage('pa')" data-lang="pa"
@@ -166,10 +178,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">ਪੰਜਾਬੀ (Punjabi)</p>
-                                                <p class="text-[10px] text-gray-500">Punjab, Chandigarh</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Punjab, Chandigarh</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 4. Bengali -->
                                     <button onclick="changeLanguage('bn')" data-lang="bn"
@@ -178,10 +190,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">বাংলা (Bengali)</p>
-                                                <p class="text-[10px] text-gray-500">West Bengal, Tripura, Assam</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">West Bengal, Tripura, Assam</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 5. Marathi -->
                                     <button onclick="changeLanguage('mr')" data-lang="mr"
@@ -190,10 +202,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">मराठी (Marathi)</p>
-                                                <p class="text-[10px] text-gray-500">Maharashtra, Goa</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Maharashtra, Goa</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 6. Telugu -->
                                     <button onclick="changeLanguage('te')" data-lang="te"
@@ -202,10 +214,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">తెలుగు (Telugu)</p>
-                                                <p class="text-[10px] text-gray-500">Andhra Pradesh, Telangana</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Andhra Pradesh, Telangana</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 7. Tamil -->
                                     <button onclick="changeLanguage('ta')" data-lang="ta"
@@ -214,10 +226,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">தமிழ் (Tamil)</p>
-                                                <p class="text-[10px] text-gray-500">Tamil Nadu, Puducherry</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Tamil Nadu, Puducherry</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 8. Gujarati -->
                                     <button onclick="changeLanguage('gu')" data-lang="gu"
@@ -226,10 +238,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">ગુજરાતી (Gujarati)</p>
-                                                <p class="text-[10px] text-gray-500">Gujarat, Daman & Diu</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Gujarat, Daman & Diu</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 9. Kannada -->
                                     <button onclick="changeLanguage('kn')" data-lang="kn"
@@ -238,10 +250,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">ಕನ್ನಡ (Kannada)</p>
-                                                <p class="text-[10px] text-gray-500">Karnataka</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Karnataka</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 10. Malayalam -->
                                     <button onclick="changeLanguage('ml')" data-lang="ml"
@@ -250,10 +262,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">മലയാളം (Malayalam)</p>
-                                                <p class="text-[10px] text-gray-500">Kerala, Lakshadweep</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Kerala, Lakshadweep</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 11. Odia -->
                                     <button onclick="changeLanguage('or')" data-lang="or"
@@ -262,10 +274,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">ଓଡ଼ିଆ (Odia)</p>
-                                                <p class="text-[10px] text-gray-500">Odisha</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Odisha</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 12. Assamese -->
                                     <button onclick="changeLanguage('as')" data-lang="as"
@@ -274,10 +286,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">অসমীয়া (Assamese)</p>
-                                                <p class="text-[10px] text-gray-500">Assam</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">Assam</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                     <!-- 13. Urdu -->
                                     <button onclick="changeLanguage('ur')" data-lang="ur"
@@ -286,10 +298,10 @@
                                             <span class="text-base">🇮🇳</span>
                                             <div>
                                                 <p class="font-bold text-gray-900 leading-tight">اردو (Urdu)</p>
-                                                <p class="text-[10px] text-gray-500">J&K, Telangana, UP</p>
+                                                <p class="text-[10px] text-gray-600 font-medium">J&K, Telangana, UP</p>
                                             </div>
                                         </div>
-                                        <i class="fas fa-check text-green-600 text-xs lang-check hidden"></i>
+                                        <i class="fas fa-check text-green-700 text-xs lang-check hidden"></i>
                                     </button>
                                 </div>
                             </div>
@@ -305,14 +317,14 @@
             </div>
         </nav>
 
-        <!-- Pages Container -->
-        <div class="container mx-auto px-4 py-6">
+        <!-- Pages Container (Main Landmark) -->
+        <main id="mainContent" role="main" class="container mx-auto px-4 py-6">
             <!-- Welcome Page -->
             <div id="welcomePage" class="page active">
                 <div class="max-w-4xl mx-auto text-center py-8">
-                    <i class="fas fa-seedling text-green-600 text-5xl mb-6"></i>
+                    <i class="fas fa-seedling text-green-700 text-5xl mb-6"></i>
                     <h1 class="text-4xl font-bold text-gray-800 mb-4" id="welcomeTitle">Welcome to AgriFarmers</h1>
-                    <p class="text-xl text-gray-600 mb-8" id="welcomeSubtitle">Your trusted companion for modern
+                    <p class="text-xl text-gray-700 mb-8" id="welcomeSubtitle">Your trusted companion for modern
                         farming.</p>
 
                     <!-- Horizontal Scroll Features -->
@@ -322,9 +334,9 @@
                             <!-- Smart Location -->
                             <div class="snap-start flex-shrink-0 w-full max-w-md mx-2">
                                 <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-md">
-                                    <i class="fas fa-location-dot text-green-500 text-4xl mb-4"></i>
-                                    <h3 class="font-bold text-xl mb-2" id="feature1Title">Smart Location</h3>
-                                    <p class="text-gray-600 text-center" id="feature1Desc">Get location-based weather
+                                    <i class="fas fa-location-dot text-green-700 text-4xl mb-4"></i>
+                                    <h2 class="font-bold text-xl mb-2 text-gray-800" id="feature1Title">Smart Location</h2>
+                                    <p class="text-gray-700 text-center" id="feature1Desc">Get location-based weather
                                         and farming advice</p>
                                 </div>
                             </div>
@@ -332,9 +344,9 @@
                             <!-- Live Weather -->
                             <div class="snap-start flex-shrink-0 w-full max-w-md mx-2">
                                 <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-md">
-                                    <i class="fas fa-cloud-sun text-blue-500 text-4xl mb-4"></i>
-                                    <h3 class="font-bold text-xl mb-2" id="feature2Title">Live Weather</h3>
-                                    <p class="text-gray-600 text-center" id="feature2Desc">Accurate weather forecasts
+                                    <i class="fas fa-cloud-sun text-blue-600 text-4xl mb-4"></i>
+                                    <h2 class="font-bold text-xl mb-2 text-gray-800" id="feature2Title">Live Weather</h2>
+                                    <p class="text-gray-700 text-center" id="feature2Desc">Accurate weather forecasts
                                         and farming alerts</p>
                                 </div>
                             </div>
@@ -342,9 +354,9 @@
                             <!-- Market Prices -->
                             <div class="snap-start flex-shrink-0 w-full max-w-md mx-2">
                                 <div class="flex flex-col items-center p-6 bg-white rounded-xl shadow-md">
-                                    <i class="fas fa-chart-line text-purple-500 text-4xl mb-4"></i>
-                                    <h3 class="font-bold text-xl mb-2" id="feature3Title">Market Prices</h3>
-                                    <p class="text-gray-600 text-center" id="feature3Desc">Real-time crop prices and
+                                    <i class="fas fa-chart-line text-purple-600 text-4xl mb-4"></i>
+                                    <h2 class="font-bold text-xl mb-2 text-gray-800" id="feature3Title">Market Prices</h2>
+                                    <p class="text-gray-700 text-center" id="feature3Desc">Real-time crop prices and
                                         market trends</p>
                                 </div>
                             </div>
@@ -352,32 +364,24 @@
 
                         <!-- Scroll Indicators -->
                         <div class="flex justify-center gap-2 mt-4">
-                            <div class="scroll-dot active w-3 h-3 rounded-full bg-green-500" data-slide="0"></div>
-                            <div class="scroll-dot w-3 h-3 rounded-full bg-gray-300" data-slide="1"></div>
-                            <div class="scroll-dot w-3 h-3 rounded-full bg-gray-300" data-slide="2"></div>
+                            <div class="scroll-dot active w-3 h-3 rounded-full bg-green-700" data-slide="0"></div>
+                            <div class="scroll-dot w-3 h-3 rounded-full bg-gray-400" data-slide="1"></div>
+                            <div class="scroll-dot w-3 h-3 rounded-full bg-gray-400" data-slide="2"></div>
                         </div>
                     </div>
 
                     <!-- Action Buttons -->
                     <div class="space-y-4">
                         <button onclick="showPage('loginPage')"
-                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-md">
+                            class="bg-green-700 hover:bg-green-800 text-white font-bold py-3 px-8 rounded-lg text-lg transition-colors shadow-md">
                             <i class="fas fa-sign-in-alt mr-2"></i>
                             <span id="getStartedBtn">Get Started (Login with OTP)</span>
                         </button>
 
-                        <!-- <div>
-                            <button onclick="enterDemoMode()"
-                                class="bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border border-emerald-300 font-bold py-2.5 px-6 rounded-lg text-sm transition-colors shadow-sm inline-flex items-center gap-2">
-                                <i class="fas fa-bolt text-emerald-600"></i>
-                                <span>Demo Mode (Instant Dashboard & Precision Hub)</span>
-                            </button>
-                        </div> -->
-
-                        <p class="text-gray-600">
+                        <p class="text-gray-700">
                             <span id="noAccountText">Don't have an account?</span>
                             <button onclick="showPage('signUpPage')"
-                                class="text-green-600 font-medium hover:underline ml-1" id="signUpBtn">Sign Up</button>
+                                class="text-green-700 font-semibold hover:underline ml-1" id="signUpBtn">Sign Up</button>
                         </p>
                     </div>
 
@@ -419,15 +423,15 @@
                         </div>
 
                         <button onclick="handleLogin()"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-colors">
+                            class="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg transition-colors">
                             <i class="fas fa-sign-in-alt mr-2"></i>
                             <span id="sendOtpBtn">Send OTP</span>
                         </button>
 
-                        <p class="text-center text-gray-600">
+                        <p class="text-center text-gray-700">
                             <span id="noAccountText2">Don't have an account?</span>
                             <button onclick="showPage('signUpPage')"
-                                class="text-green-600 font-medium hover:underline ml-1" id="signUpBtn2">Sign Up</button>
+                                class="text-green-700 font-semibold hover:underline ml-1" id="signUpBtn2">Sign Up</button>
                         </p>
                     </div>
                 </div>
@@ -522,15 +526,15 @@
                         </div>
 
                         <button onclick="handleSignUp()"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg mt-4 transition-colors">
+                            class="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg mt-4 transition-colors">
                             <i class="fas fa-user-plus mr-2"></i>
                             <span id="signupBtn">Sign Up</span>
                         </button>
 
-                        <p class="text-center text-gray-600">
+                        <p class="text-center text-gray-700">
                             <span id="haveAccount">Already have an account?</span>
                             <button onclick="showPage('loginPage')"
-                                class="text-green-600 font-medium hover:underline ml-1" id="loginBtn">Login</button>
+                                class="text-green-700 font-semibold hover:underline ml-1" id="loginBtn">Login</button>
                         </p>
                     </div>
                 </div>
@@ -591,7 +595,7 @@
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
                             <div class="flex items-center gap-2 mb-1">
-                                <h2 class="text-2xl font-bold" id="helloText">Hello</h2>
+                                <h1 class="text-2xl font-bold" id="helloText">Hello</h1>
                                 <span class="text-2xl font-bold text-yellow-300" id="farmerName">Farmer</span>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
@@ -615,7 +619,7 @@
 
                 <!-- Dashboard -->
                 <div class="mb-8">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4" id="dashboardTitle">Your Farming Dashboard</h3>
+                    <h2 class="text-xl font-bold text-gray-800 mb-4" id="dashboardTitle">Your Farming Dashboard</h2>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <!-- Weather Card -->
@@ -624,8 +628,8 @@
                             <div class="flex items-start justify-between mb-4">
                                 <div>
                                     <i class="fas fa-cloud-sun text-blue-500 text-2xl"></i>
-                                    <h4 class="font-bold text-gray-800 mt-2 text-lg" id="weatherTitle">Weather Forecast
-                                    </h4>
+                                    <h3 class="font-bold text-gray-800 mt-2 text-lg" id="weatherTitle">Weather Forecast
+                                    </h3>
                                     <p class="text-sm text-gray-600" id="weatherDesc">Live weather for your location</p>
                                 </div>
                                 <i class="fas fa-chevron-right text-gray-400"></i>
@@ -647,7 +651,7 @@
                             <div class="flex items-start justify-between mb-4">
                                 <div>
                                     <i class="fas fa-chart-line text-red-500 text-2xl"></i>
-                                    <h4 class="font-bold text-gray-800 mt-2 text-lg" id="marketTitle">Market Prices</h4>
+                                    <h3 class="font-bold text-gray-800 mt-2 text-lg" id="marketTitle">Market Prices</h3>
                                     <p class="text-sm text-gray-600" id="marketDesc">Live India crop prices</p>
                                 </div>
                                 <i class="fas fa-chevron-right text-gray-400"></i>
@@ -669,8 +673,8 @@
                             <div class="flex items-start justify-between mb-4">
                                 <div>
                                     <i class="fas fa-seedling text-green-500 text-2xl"></i>
-                                    <h4 class="font-bold text-gray-800 mt-2 text-lg" id="seedTitle">Seed & Fertilizer
-                                    </h4>
+                                    <h3 class="font-bold text-gray-800 mt-2 text-lg" id="seedTitle">Seed & Fertilizer
+                                    </h3>
                                     <p class="text-sm text-gray-600" id="seedDesc">Recommendations for your region</p>
                                 </div>
                                 <i class="fas fa-chevron-right text-gray-400"></i>
@@ -704,10 +708,10 @@
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
                                 <i class="fas fa-brain text-green-600"></i>
                                 <span id="precisionHubTitle">Precision Agriculture Hub</span>
-                            </h3>
+                            </h2>
                             <p class="text-sm text-gray-600" id="precisionHubDesc">AI-powered crop health, soil diagnostics, mandi locator & water planning</p>
                         </div>
                     </div>
@@ -722,7 +726,7 @@
                                     <i class="fas fa-stethoscope"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base" id="cropDoctorTitle">Crop Doctor AI</h4>
+                                    <h3 class="font-bold text-gray-900 text-base" id="cropDoctorTitle">Crop Doctor AI</h3>
                                     <span id="aiVisionBadge" class="text-[10px] font-bold px-2 py-0.5 bg-green-600 text-white rounded-full">AI Vision</span>
                                 </div>
                                 <p class="text-xs text-gray-600 mb-3" id="cropDoctorDesc">Scan leaf photos to diagnose diseases, fungal rusts, and get organic/chemical remedies.</p>
@@ -743,7 +747,7 @@
                                     <i class="fas fa-flask"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base" id="soilPrescriptionTitle">Soil Prescription</h4>
+                                    <h3 class="font-bold text-gray-900 text-base" id="soilPrescriptionTitle">Soil Prescription</h3>
                                     <span id="npkPhBadge" class="text-[10px] font-bold px-2 py-0.5 bg-emerald-600 text-white rounded-full">NPK & pH</span>
                                 </div>
                                 <p class="text-xs text-gray-600 mb-3" id="soilPrescriptionDesc">Calculate exact Urea, DAP, MOP bag doses & 3-stage application schedule for your land.</p>
@@ -764,7 +768,7 @@
                                     <i class="fas fa-map-location-dot"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base" id="farmMapTitle">Farm Map & Mandis</h4>
+                                    <h3 class="font-bold text-gray-900 text-base" id="farmMapTitle">Farm Map & Mandis</h3>
                                     <span id="gpsLiveBadge" class="text-[10px] font-bold px-2 py-0.5 bg-blue-600 text-white rounded-full">GPS Live</span>
                                 </div>
                                 <p class="text-xs text-gray-600 mb-3" id="farmMapDesc">Locate nearby APMC Grain Mandis with live rates, KVK Soil Labs, and certified seed dealers.</p>
@@ -785,7 +789,7 @@
                                     <i class="fas fa-faucet-drip"></i>
                                 </div>
                                 <div class="flex items-center gap-2 mb-1">
-                                    <h4 class="font-bold text-gray-900 text-base" id="irrigationPlannerTitle">Smart Irrigation</h4>
+                                    <h3 class="font-bold text-gray-900 text-base" id="irrigationPlannerTitle">Smart Irrigation</h3>
                                     <span id="et0WaterBadge" class="text-[10px] font-bold px-2 py-0.5 bg-cyan-600 text-white rounded-full">ET0 Water</span>
                                 </div>
                                 <p class="text-xs text-gray-600 mb-3" id="irrigationPlannerDesc">FAO-56 Evapotranspiration schedule, tube-well run times, and 7-day watering calendar.</p>
@@ -804,14 +808,14 @@
                     <div class="flex items-start">
                         <i class="fas fa-lightbulb text-yellow-500 text-2xl mr-4 mt-1"></i>
                         <div>
-                            <h4 class="font-bold text-gray-800 mb-2 text-lg" id="tipsTitle">Today's Farming Tips</h4>
+                            <h2 class="font-bold text-gray-800 mb-2 text-lg" id="tipsTitle">Today's Farming Tips</h2>
                             <p class="text-gray-700" id="farmingAdvisory">Good weather for farming activities. Ideal for
                                 irrigation and fertilization.</p>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </main>
 
         <!-- Footer with PWA Tools -->
         <footer class="bg-green-800 text-white py-8 mt-8">
@@ -1511,10 +1515,10 @@
     <script src="js/auth-ui.js"></script>
 
     <!-- AGROVISION PRECISION AGRICULTURE MODULES (ADDITIVE) -->
-    <script src="js/features/crop-doctor.js"></script>
-    <script src="js/features/soil-prescription.js"></script>
-    <script src="js/features/farm-map.js"></script>
-    <script src="js/features/irrigation-planner.js"></script>
+    <script src="js/features/crop-doctor.js" defer></script>
+    <script src="js/features/soil-prescription.js" defer></script>
+    <script src="js/features/farm-map.js" defer></script>
+    <script src="js/features/irrigation-planner.js" defer></script>
 
 </body>
 

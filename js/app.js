@@ -219,14 +219,12 @@ const translations = window.translations || {};
 function bootstrapApp() {
     console.log('🌱 AgriFarmers App Initializing...');
     
-    // Immediately hide loading screen and show app
-    setTimeout(() => {
-        const loadingScreen = document.getElementById('loadingScreen');
-        if (loadingScreen) loadingScreen.style.display = 'none';
-        const app = document.getElementById('app');
-        if (app) app.style.display = 'block';
-        initApp();
-    }, 400);
+    // Immediately hide loading screen and show app without artificial delay
+    const loadingScreen = document.getElementById('loadingScreen');
+    if (loadingScreen) loadingScreen.style.display = 'none';
+    const app = document.getElementById('app');
+    if (app && app.style.display === 'none') app.style.display = 'block';
+    initApp();
     
     // Load saved language preference - strictly default to Hindi ('hi')
     let savedLang = localStorage.getItem('agrifarmers_language');
