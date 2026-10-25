@@ -888,6 +888,20 @@ async function fetchIpGeolocation() {
     return null;
 }
 
+// Clean and humanize administrative names (e.g. "Jaipur Municipal Corporation" -> "Jaipur")
+function cleanLocationName(rawName) {
+    if (!rawName) return '';
+    return rawName
+        .replace(/\s*Municipal Corporation\s*/gi, '')
+        .replace(/\s*Nagar Nigam\s*/gi, '')
+        .replace(/\s*Mahanagar Palika\s*/gi, '')
+        .replace(/\s*Municipal Council\s*/gi, '')
+        .replace(/\s*Municipality\s*/gi, '')
+        .replace(/\s*Cantonment Board\s*/gi, '')
+        .replace(/\s*Tehsil\s*/gi, '')
+        .trim();
+}
+
 // Multi-tier high-accuracy reverse geocoding
 async function reverseGeocodeCoords(lat, lon) {
     const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
@@ -899,7 +913,8 @@ async function reverseGeocodeCoords(lat, lon) {
             const list = await owRes.json();
             if (Array.isArray(list) && list.length > 0) {
                 const item = list[0];
-                const city = item.name || '';
+                const rawCity = item.name || '';
+                const city = cleanLocationName(rawCity) || rawCity;
                 const state = item.state || '';
                 if (city || state) {
                     return {
@@ -918,7 +933,8 @@ async function reverseGeocodeCoords(lat, lon) {
         const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
         if (bdcRes.ok) {
             const geo = await bdcRes.json();
-            const city = geo.locality || geo.city || geo.principalSubdivisionDistrict || '';
+            const rawLocality = geo.locality || geo.city || geo.principalSubdivisionDistrict || '';
+            const city = cleanLocationName(rawLocality) || rawLocality;
             const state = geo.principalSubdivision || '';
             if (city || state) {
                 return {
@@ -939,7 +955,8 @@ async function reverseGeocodeCoords(lat, lon) {
         if (nomRes.ok) {
             const data = await nomRes.json();
             const addr = data.address || {};
-            const city = addr.city || addr.town || addr.village || addr.suburb || addr.district || addr.county || addr.state_district || 'Your Location';
+            const rawCity = addr.city || addr.town || addr.village || addr.suburb || addr.district || addr.county || addr.state_district || 'Your Location';
+            const city = cleanLocationName(rawCity) || rawCity;
             const state = addr.state || '';
             return {
                 city,
@@ -2341,6 +2358,7 @@ window.searchCustomCityWeather = searchCustomCityWeather;
 window.openSetLocationModal = openSetLocationModal;
 window.searchAndSetFarmLocation = searchAndSetFarmLocation;
 window.detectDeviceGpsAndSet = detectDeviceGpsAndSet;
+window.cleanLocationName = cleanLocationName;
 
 // Close modals when clicking outside
 document.addEventListener('click', function(event) {
