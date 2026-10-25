@@ -645,6 +645,7 @@
 
     let map = null;
     let markersLayer = null;
+    let userLocationMarker = null;
     let activeFilter = 'all';
     let userCoords = { lat: 30.7071, lng: 76.2166 }; // Default: Punjab agricultural hub
     let searchQuery = '';
@@ -728,7 +729,7 @@
         // Initialize Leaflet Map
         map = L.map('farmMapContainer', {
             center: [userCoords.lat, userCoords.lng],
-            zoom: 9,
+            zoom: 10,
             zoomControl: true
         });
 
@@ -755,14 +756,66 @@
             iconAnchor: [16, 16]
         });
 
-        L.marker([userCoords.lat, userCoords.lng], { icon: userIcon })
+        userLocationMarker = L.marker([userCoords.lat, userCoords.lng], { icon: userIcon })
             .addTo(map)
-            .bindPopup('<b>Your Farm Location</b><br>Centering precision mandi & dealer search')
+            .bindPopup(`<b>Your Farm Location</b><br>${window.userLocation?.formatted || 'Live GPS Centered'}`)
             .openPopup();
 
         renderFacilityMarkers();
         renderFacilityList();
     }
+
+    function updateUserLocation(coords, formattedName) {
+        if (!coords || typeof coords.lat !== 'number' || typeof coords.lng !== 'number') return;
+        userCoords = coords;
+        if (!map) return;
+
+        const userIcon = L.divIcon({
+            className: 'custom-user-pin',
+            html: `
+                <div class="relative flex items-center justify-center w-8 h-8">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-6 w-6 bg-green-600 border-2 border-white shadow-lg items-center justify-center text-white text-xs">
+                        <i class="fas fa-user"></i>
+                    </span>
+                </div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+
+        if (userLocationMarker) {
+            userLocationMarker.setLatLng([coords.lat, coords.lng]);
+        } else {
+            userLocationMarker = L.marker([coords.lat, coords.lng], { icon: userIcon }).addTo(map);
+        }
+
+        userLocationMarker
+            .bindPopup(`<b>Your Farm Location</b><br>${formattedName || 'Live GPS Centered'}`)
+            .openPopup();
+
+        map.setView([coords.lat, coords.lng], 10);
+        renderFacilityMarkers();
+        renderFacilityList();
+    }
+
+    function locateMe() {
+        if (window.getUserLocation) {
+            window.getUserLocation(true);
+        }
+        if (window.userLocation && window.userLocation.lat && window.userLocation.lon) {
+            updateUserLocation({ lat: window.userLocation.lat, lng: window.userLocation.lon }, window.userLocation.formatted);
+        }
+    }
+
+    window.addEventListener('agrifarmers:location-updated', (evt) => {
+        const loc = evt.detail;
+        if (loc && loc.lat && loc.lon) {
+            userCoords = { lat: loc.lat, lng: loc.lon };
+            if (map) {
+                updateUserLocation(userCoords, loc.formatted);
+            }
+        }
+    });
 
     // ─── Marker Rendering ──────────────────────────────────────────────────────
 
@@ -947,7 +1000,9 @@
         close: closeFarmMapModal,
         setFilter,
         onSearchInput,
-        focusFacility
+        focusFacility,
+        locateMe,
+        updateUserLocation
     };
 
     window.openFarmMapModal = openFarmMapModal;

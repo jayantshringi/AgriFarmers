@@ -820,24 +820,75 @@ function startOTPTimer() {
 
 // ── Resend OTP ───────────────────────────────────────────────
 
-// Update user info
-function updateUserInfo() {
-    if (!currentUser) return;
-    
-    const farmerName = document.getElementById('farmerName');
-    const farmerLocation = document.getElementById('farmerLocation');
-    
-    if (farmerName) farmerName.textContent = currentUser.name || 'Farmer';
-    if (farmerLocation) {
-        if (currentUser.district && currentUser.state) {
-            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.district}, ${currentUser.state}`;
-        } else if (currentUser.locationName) {
-            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-green-200"></i>${currentUser.locationName}`;
-        }
-    }
+// ─── Real-Time Precision Location & GPS Tracking Engine ──────────────────────
+
+let liveWatchId = null;
+
+// Distance calculation using Haversine formula (km)
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return parseFloat((R * c).toFixed(2));
 }
 
-// Helper: Multi-tier high-accuracy reverse geocoding
+// Multi-tier real-time client IP Geolocation fallback
+async function fetchIpGeolocation() {
+    // Tier 1: BigDataCloud client IP geolocation (Fast, CORS-friendly, accurate for India)
+    try {
+        const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client');
+        if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+                const city = data.locality || data.city || data.principalSubdivisionDistrict || '';
+                const state = data.principalSubdivision || '';
+                return {
+                    lat: data.latitude,
+                    lon: data.longitude,
+                    accuracy: 2500,
+                    city: city || 'Your Location',
+                    state: state || '',
+                    formatted: (city && state) ? `${city}, ${state}` : (city || state || 'Your Location'),
+                    source: 'ip'
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('BigDataCloud IP geolocation error:', e.message);
+    }
+
+    // Tier 2: ipwho.is client IP geolocation
+    try {
+        const res = await fetch('https://ipwho.is/');
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.success && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+                const city = data.city || '';
+                const state = data.region || '';
+                return {
+                    lat: data.latitude,
+                    lon: data.longitude,
+                    accuracy: 5000,
+                    city: city || 'Your Location',
+                    state: state || '',
+                    formatted: (city && state) ? `${city}, ${state}` : (city || state || 'Your Location'),
+                    source: 'ip'
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('ipwho.is IP geolocation error:', e.message);
+    }
+
+    return null;
+}
+
+// Multi-tier high-accuracy reverse geocoding
 async function reverseGeocodeCoords(lat, lon) {
     const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
     
@@ -888,7 +939,7 @@ async function reverseGeocodeCoords(lat, lon) {
         if (nomRes.ok) {
             const data = await nomRes.json();
             const addr = data.address || {};
-            const city = addr.city || addr.town || addr.district || addr.county || addr.state_district || 'Your Location';
+            const city = addr.city || addr.town || addr.village || addr.suburb || addr.district || addr.county || addr.state_district || 'Your Location';
             const state = addr.state || '';
             return {
                 city,
@@ -902,176 +953,369 @@ async function reverseGeocodeCoords(lat, lon) {
     return null;
 }
 
-// Auto-detect GPS location during Signup
+// Render formatted location in header badge without duplicate icons
+function renderLocationUI(loc, isLive = true) {
+    const farmerLocation = document.getElementById('farmerLocation');
+    const statusIcon = document.getElementById('locationStatusIcon');
+    if (!farmerLocation) return;
+
+    if (!loc) {
+        farmerLocation.textContent = 'Location unavailable';
+        return;
+    }
+
+    const formattedLoc = loc.formatted || (loc.state ? `${loc.city}, ${loc.state}` : loc.city);
+    const coordsStr = (typeof loc.lat === 'number' && typeof loc.lon === 'number')
+        ? `${loc.lat.toFixed(2)}°N, ${loc.lon.toFixed(2)}°E`
+        : '';
+
+    const sourceBadge = loc.source === 'gps'
+        ? `<span class="bg-emerald-500/40 text-emerald-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Live GPS</span>`
+        : loc.source === 'ip'
+            ? `<span class="bg-sky-500/40 text-sky-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Live Net</span>`
+            : `<span class="bg-amber-500/40 text-amber-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">Profile</span>`;
+
+    farmerLocation.innerHTML = `<span class="font-bold">${formattedLoc}</span> ${coordsStr ? `<span class="text-[10px] opacity-80 font-mono">(${coordsStr})</span>` : ''} ${sourceBadge}`;
+
+    if (statusIcon) {
+        statusIcon.className = loc.source === 'gps' 
+            ? 'fas fa-location-crosshairs text-yellow-300' 
+            : 'fas fa-location-dot text-emerald-200';
+    }
+}
+
+// Update user info - preserves live location if detected
+function updateUserInfo() {
+    if (!currentUser) return;
+    
+    const farmerName = document.getElementById('farmerName');
+    const farmerLocation = document.getElementById('farmerLocation');
+    
+    if (farmerName) farmerName.textContent = currentUser.name || 'Farmer';
+    
+    if (farmerLocation) {
+        // If live userLocation exists, preserve live location in header
+        if (window.userLocation && window.userLocation.formatted) {
+            renderLocationUI(window.userLocation, window.userLocation.source !== 'fallback');
+        } else if (currentUser.locationName) {
+            farmerLocation.innerHTML = `<span class="font-bold">${currentUser.locationName}</span>`;
+        } else if (currentUser.district && currentUser.state) {
+            farmerLocation.innerHTML = `<span class="font-bold">${currentUser.district}, ${currentUser.state}</span>`;
+        }
+    }
+}
+
+// Acquire live location: High Accuracy GPS -> Standard Accuracy GPS -> IP Geolocation
+async function acquireLivePosition(forceRefresh = false) {
+    if (navigator.geolocation) {
+        // 1. High Accuracy GPS (fast 6s timeout)
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true,
+                    timeout: 6000,
+                    maximumAge: forceRefresh ? 0 : 30000
+                });
+            });
+            return {
+                lat: pos.coords.latitude,
+                lon: pos.coords.longitude,
+                accuracy: pos.coords.accuracy,
+                source: 'gps'
+            };
+        } catch (highErr) {
+            console.warn('High-accuracy GPS timeout/unavailable, falling back to standard accuracy:', highErr.message);
+            // 2. Standard accuracy (Wi-Fi/Cell tower location - works indoors and on laptops)
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        enableHighAccuracy: false,
+                        timeout: 5000,
+                        maximumAge: forceRefresh ? 0 : 60000
+                    });
+                });
+                return {
+                    lat: pos.coords.latitude,
+                    lon: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy,
+                    source: 'gps'
+                };
+            } catch (stdErr) {
+                console.warn('Standard geolocation failed or denied:', stdErr.message);
+            }
+        }
+    }
+
+    // 3. Fallback: Real-time IP Geolocation (Zero permission needed, instant live coordinates)
+    console.log('🌐 Querying live IP Geolocation fallback...');
+    const ipGeo = await fetchIpGeolocation();
+    if (ipGeo) {
+        return ipGeo;
+    }
+
+    return null;
+}
+
+// Start continuous background GPS watching for farmers moving on fields
+function startLiveLocationTracking() {
+    if (!navigator.geolocation || liveWatchId !== null) return;
+    
+    try {
+        liveWatchId = navigator.geolocation.watchPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                const accuracy = pos.coords.accuracy;
+
+                // Update if moved more than 200m or if previous location was IP/fallback
+                const distanceMoved = userLocation 
+                    ? calculateDistanceKm(userLocation.lat, userLocation.lon, lat, lon) 
+                    : 1;
+
+                if (distanceMoved > 0.2 || userLocation?.source !== 'gps') {
+                    console.log(`📍 Live GPS position updated (moved ${distanceMoved.toFixed(2)} km)`);
+                    const geo = await reverseGeocodeCoords(lat, lon);
+                    const city = geo?.city || userLocation?.city || 'Your Location';
+                    const state = geo?.state || userLocation?.state || '';
+                    const formatted = geo?.formatted || ((city && state) ? `${city}, ${state}` : city);
+
+                    userLocation = {
+                        lat,
+                        lon,
+                        accuracy,
+                        source: 'gps',
+                        city,
+                        state,
+                        formatted,
+                        timestamp: Date.now()
+                    };
+                    window.userLocation = userLocation;
+
+                    renderLocationUI(userLocation, true);
+                    window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: userLocation }));
+                    loadWeatherData(lat, lon, formatted);
+                }
+            },
+            (err) => {
+                console.warn('Geolocation watch notice:', err.message);
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 30000,
+                timeout: 15000
+            }
+        );
+    } catch (_) {}
+}
+
+function stopLiveLocationTracking() {
+    if (liveWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(liveWatchId);
+        liveWatchId = null;
+    }
+}
+
+// Auto-detect GPS/Network location during Signup
 async function autoDetectSignupLocation() {
     const btn = document.getElementById('autoDetectLocBtn');
     const stateSelect = document.getElementById('signUpState');
     const districtSelect = document.getElementById('signUpDistrict');
 
-    if (!navigator.geolocation) {
-        showToast('Geolocation is not supported by your browser', 'error');
-        return;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin text-emerald-600"></i> Detecting Live Location...`;
     }
 
-    if (btn) btn.textContent = 'Detecting GPS Location...';
+    try {
+        const pos = await acquireLivePosition(true);
+        if (!pos) {
+            showToast('Could not detect location. Please select State & District manually.', 'info');
+            return;
+        }
 
-    navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            window.signupDetectedLocation = { lat, lon };
+        const lat = pos.coords ? pos.coords.latitude : pos.lat;
+        const lon = pos.coords ? pos.coords.longitude : pos.lon;
+        window.signupDetectedLocation = { lat, lon, source: pos.source || 'gps' };
 
-            const geo = await reverseGeocodeCoords(lat, lon);
-            if (btn) btn.textContent = 'Auto-Detect State & District with GPS';
+        // Reverse geocode
+        const geo = await reverseGeocodeCoords(lat, lon);
+        const detectedState = geo?.state || pos.state || '';
+        const detectedCity = geo?.city || pos.city || '';
 
-            if (geo) {
-                // Try selecting state in dropdown
-                if (stateSelect && geo.state) {
-                    let matchedState = Array.from(stateSelect.options).find(o => 
-                        o.value.toLowerCase() === geo.state.toLowerCase() || geo.state.toLowerCase().includes(o.value.toLowerCase())
-                    );
-                    if (matchedState) {
-                        stateSelect.value = matchedState.value;
-                        stateSelect.dispatchEvent(new Event('change'));
-                    } else {
-                        // Add state option if not present
-                        const opt = document.createElement('option');
-                        opt.value = geo.state;
-                        opt.textContent = geo.state;
-                        stateSelect.appendChild(opt);
-                        stateSelect.value = geo.state;
-                        stateSelect.dispatchEvent(new Event('change'));
-                    }
-                }
+        // Match state in dropdown
+        if (stateSelect && detectedState) {
+            let matchedOption = Array.from(stateSelect.options).find(o => 
+                o.value && (
+                    o.value.toLowerCase() === detectedState.toLowerCase() ||
+                    detectedState.toLowerCase().includes(o.value.toLowerCase()) ||
+                    o.value.toLowerCase().includes(detectedState.toLowerCase())
+                )
+            );
 
-                // Add or select district
-                if (districtSelect && geo.city) {
-                    districtSelect.disabled = false;
-                    let matchedDistrict = Array.from(districtSelect.options).find(o => 
-                        o.value.toLowerCase() === geo.city.toLowerCase()
-                    );
-                    if (matchedDistrict) {
-                        districtSelect.value = matchedDistrict.value;
-                    } else {
-                        const opt = document.createElement('option');
-                        opt.value = geo.city;
-                        opt.textContent = geo.city;
-                        districtSelect.appendChild(opt);
-                        districtSelect.value = geo.city;
-                    }
-                }
-
-                showToast(`📍 Location detected: ${geo.formatted}`, 'success');
+            if (matchedOption) {
+                stateSelect.value = matchedOption.value;
+                stateSelect.dispatchEvent(new Event('change'));
             } else {
-                showToast(`📍 Coordinates: ${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`, 'info');
+                const opt = document.createElement('option');
+                opt.value = detectedState;
+                opt.textContent = detectedState;
+                stateSelect.appendChild(opt);
+                stateSelect.value = detectedState;
+                stateSelect.dispatchEvent(new Event('change'));
             }
-        },
-        (err) => {
-            if (btn) btn.textContent = 'Auto-Detect State & District with GPS';
-            console.warn('Signup geolocation error:', err.message);
-            showToast('Please allow location permission in your browser', 'error');
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+        }
+
+        // Match district in dropdown
+        if (districtSelect && detectedCity) {
+            districtSelect.disabled = false;
+            let matchedDistrict = Array.from(districtSelect.options).find(o => 
+                o.value && (
+                    o.value.toLowerCase() === detectedCity.toLowerCase() ||
+                    detectedCity.toLowerCase().includes(o.value.toLowerCase()) ||
+                    o.value.toLowerCase().includes(detectedCity.toLowerCase())
+                )
+            );
+
+            if (matchedDistrict) {
+                districtSelect.value = matchedDistrict.value;
+            } else {
+                const opt = document.createElement('option');
+                opt.value = detectedCity;
+                opt.textContent = detectedCity;
+                districtSelect.appendChild(opt);
+                districtSelect.value = detectedCity;
+            }
+        }
+
+        const formatted = geo?.formatted || pos.formatted || (detectedState ? `${detectedCity}, ${detectedState}` : detectedCity);
+        const sourceLabel = pos.source === 'gps' ? 'Live GPS' : 'Live Network';
+        showToast(`📍 Location auto-detected (${sourceLabel}): ${formatted}`, 'success');
+
+    } catch (e) {
+        console.error('Signup autodetect error:', e);
+        showToast('Location detection error. Please select State & District manually.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-crosshairs text-emerald-600"></i> <span id="autoDetectLocBtn">Auto-Detect State & District with GPS</span>`;
+        }
+    }
 }
 
-// Get real-time accurate user location with high precision GPS
-function getUserLocation(forceRefresh = false) {
+// Get real-time accurate user location with high precision GPS & IP fallback
+async function getUserLocation(forceRefresh = false) {
     const farmerLocation = document.getElementById('farmerLocation');
+    const updateIcon = document.getElementById('updateGpsIcon');
 
     if (farmerLocation) {
-        farmerLocation.innerHTML = `<i class="fas fa-spinner fa-spin text-xs mr-1 text-yellow-300"></i>Detecting live GPS...`;
+        farmerLocation.innerHTML = `<i class="fas fa-spinner fa-spin text-xs mr-1 text-yellow-300"></i>Detecting live location...`;
     }
+    if (updateIcon) updateIcon.classList.add('fa-spin');
 
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                const accuracy = position.coords.accuracy;
+    try {
+        const rawPos = await acquireLivePosition(forceRefresh);
+        
+        let lat, lon, accuracy, source;
+        let city, state, formatted;
 
-                userLocation = { lat, lon, accuracy };
-                window.userLocation = userLocation;
+        if (rawPos) {
+            lat = rawPos.lat;
+            lon = rawPos.lon;
+            accuracy = rawPos.accuracy || 100;
+            source = rawPos.source || 'gps';
 
-                // High-precision reverse geocoding
-                const geo = await reverseGeocodeCoords(lat, lon);
-                const city = geo?.city || currentUser?.district || 'Your Location';
-                const state = geo?.state || currentUser?.state || '';
-                const formattedLoc = geo?.formatted || (state ? `${city}, ${state}` : city);
-
-                if (farmerLocation) {
-                    farmerLocation.innerHTML = `<i class="fas fa-location-crosshairs text-xs mr-1 text-yellow-300"></i><span class="font-bold">${formattedLoc}</span> <span class="text-[10px] opacity-80 font-mono">(${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E)</span>`;
-                }
-
-                if (currentUser) {
-                    currentUser.district = city;
-                    if (state) currentUser.state = state;
-                    currentUser.locationName = formattedLoc;
-                    currentUser.location = userLocation;
-                    localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
-                }
-
-                if (forceRefresh) {
-                    showToast(`📍 Live Location: ${formattedLoc} (Accurate to ±${Math.round(accuracy)}m)`, 'success');
-                }
-
-                // Load weather and precision agriculture data with exact GPS coordinates
-                loadWeatherData(lat, lon);
-            },
-            (error) => {
-                console.warn('Geolocation warning / permission denied:', error.message);
-                
-                // Fallback location based on user profile or regional default
-                const fallbackCity = currentUser?.district || 'Ludhiana';
-                const fallbackState = currentUser?.state || 'Punjab';
-                
-                userLocation = (currentUser && currentUser.state === 'Haryana') ? { lat: 29.6857, lon: 76.9905 }
-                    : (currentUser && currentUser.state === 'Rajasthan') ? { lat: 26.8124, lon: 75.7623 }
-                    : (currentUser && currentUser.state === 'Uttar Pradesh') ? { lat: 26.8467, lon: 80.9462 }
-                    : (currentUser && currentUser.state === 'Maharashtra') ? { lat: 19.7515, lon: 75.7139 }
-                    : { lat: 30.9010, lon: 75.8573 }; // Default
-                
-                window.userLocation = userLocation;
-
-                if (farmerLocation) {
-                    farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-yellow-300"></i>${fallbackCity}, ${fallbackState}`;
-                }
-
-                if (forceRefresh) {
-                    showToast('Location permission denied. Click allow in browser address bar for live GPS.', 'error');
-                }
-
-                loadWeatherData(userLocation.lat, userLocation.lon);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 12000,
-                maximumAge: forceRefresh ? 0 : 30000
-            }
-        );
-    } else {
-        userLocation = { lat: 30.9010, lon: 75.8573 };
-        window.userLocation = userLocation;
-        if (farmerLocation) {
-            farmerLocation.innerHTML = `<i class="fas fa-location-dot text-xs mr-1 text-yellow-300"></i>${currentUser?.district || 'Ludhiana'}, ${currentUser?.state || 'Punjab'}`;
+            // High precision reverse geocode to get real-time city & district
+            const geo = await reverseGeocodeCoords(lat, lon);
+            city = geo?.city || rawPos.city || currentUser?.district || 'Your Location';
+            state = geo?.state || rawPos.state || currentUser?.state || '';
+            formatted = geo?.formatted || rawPos.formatted || ((city && state) ? `${city}, ${state}` : city);
+        } else {
+            // Regional default fallback
+            source = 'fallback';
+            const fallbackCity = currentUser?.district || 'Ludhiana';
+            const fallbackState = currentUser?.state || 'Punjab';
+            const stateCenters = {
+                'Haryana': { lat: 29.6857, lon: 76.9905 },
+                'Rajasthan': { lat: 26.8124, lon: 75.7623 },
+                'Uttar Pradesh': { lat: 26.8467, lon: 80.9462 },
+                'Maharashtra': { lat: 19.7515, lon: 75.7139 },
+                'Punjab': { lat: 30.9010, lon: 75.8573 }
+            };
+            const defaultCoords = (currentUser?.state && stateCenters[currentUser.state]) || { lat: 30.9010, lon: 75.8573 };
+            lat = defaultCoords.lat;
+            lon = defaultCoords.lon;
+            accuracy = 10000;
+            city = fallbackCity;
+            state = fallbackState;
+            formatted = `${fallbackCity}, ${fallbackState}`;
         }
-        loadWeatherData(userLocation.lat, userLocation.lon);
+
+        userLocation = {
+            lat,
+            lon,
+            accuracy,
+            source,
+            city,
+            state,
+            formatted,
+            timestamp: Date.now()
+        };
+        window.userLocation = userLocation;
+
+        // Render UI
+        renderLocationUI(userLocation, source !== 'fallback');
+
+        // Persist to user profile
+        if (currentUser) {
+            currentUser.district = city;
+            if (state) currentUser.state = state;
+            currentUser.locationName = formatted;
+            currentUser.location = { lat, lon, accuracy, source };
+            localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
+        }
+
+        // Notify user if force refreshed
+        if (forceRefresh) {
+            if (source === 'gps') {
+                showToast(`📍 Live GPS Detected: ${formatted} (±${Math.round(accuracy)}m)`, 'success');
+            } else if (source === 'ip') {
+                showToast(`📍 Live Location Detected: ${formatted} (via Network)`, 'success');
+            } else {
+                showToast(`📍 Location set to ${formatted}. Enable GPS in browser for real-time tracking.`, 'info');
+            }
+        }
+
+        // Broadcast location update to features (map, irrigation, etc.)
+        window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: userLocation }));
+
+        // Load weather with live coordinates and accurate location display
+        loadWeatherData(lat, lon, formatted);
+
+        // Start background watchPosition for ongoing movement tracking
+        startLiveLocationTracking();
+
+    } catch (err) {
+        console.error('Error fetching live location:', err);
+        if (farmerLocation) {
+            farmerLocation.textContent = currentUser?.district || 'Location Error';
+        }
+    } finally {
+        if (updateIcon) updateIcon.classList.remove('fa-spin');
     }
-    
+
     loadMarketData();
     loadSeedRecommendations();
 }
 
-// Load dashboard data
+// Load dashboard data - reuses fresh location (< 5 min old) or fetches live
 function loadDashboardData() {
-    if (userLocation) {
-        loadWeatherData(userLocation.lat, userLocation.lon);
+    if (userLocation && userLocation.timestamp && (Date.now() - userLocation.timestamp < 300000)) {
+        loadWeatherData(userLocation.lat, userLocation.lon, userLocation.formatted);
+        loadMarketData();
+        loadSeedRecommendations();
     } else {
         getUserLocation();
     }
-    
-    loadMarketData();
-    loadSeedRecommendations();
 }
 
 // Load weather data using REAL API
@@ -1094,9 +1338,10 @@ async function loadWeatherData(lat, lon, customLocationName = null) {
             
             // Determine accurate location display name
             const locName = customLocationName || 
+                window.userLocation?.formatted ||
                 currentUser?.locationName || 
+                weatherData.name ||
                 (currentUser?.district ? (currentUser.state ? `${currentUser.district}, ${currentUser.state}` : currentUser.district) : '') ||
-                weatherData.name || 
                 'Your Location';
                 
             weatherData._locationName = locName;
@@ -1105,6 +1350,7 @@ async function loadWeatherData(lat, lon, customLocationName = null) {
             
             window.latestWeatherData = weatherData;
             window.latestForecastData = forecastData;
+            window.userWeatherTemp = Math.round(weatherData.main.temp);
 
             updateWeatherCard(weatherData);
             updateWeatherModal(weatherData, forecastData);
@@ -1116,7 +1362,7 @@ async function loadWeatherData(lat, lon, customLocationName = null) {
         console.error('Error loading weather data:', error);
         
         // Fallback to realistic sample data based on location
-        const locName = customLocationName || currentUser?.locationName || currentUser?.district || 'Your Location';
+        const locName = customLocationName || window.userLocation?.formatted || currentUser?.locationName || currentUser?.district || 'Your Location';
         const sampleWeather = {
             main: {
                 temp: getRandomTemp(lat, lon),
@@ -1143,6 +1389,7 @@ async function loadWeatherData(lat, lon, customLocationName = null) {
         
         window.latestWeatherData = sampleWeather;
         window.latestForecastData = null;
+        window.userWeatherTemp = Math.round(sampleWeather.main.temp);
 
         updateWeatherCard(sampleWeather);
         updateWeatherModal(sampleWeather, null);
@@ -1253,7 +1500,7 @@ function updateWeatherCard(weatherData) {
     const condition = weatherData.weather[0].main;
     const rawDesc = weatherData.weather[0].description || condition;
     const weatherDesc = window.getTranslatedWeatherDesc ? window.getTranslatedWeatherDesc(rawDesc, targetLang) : (window.t ? window.t(rawDesc, targetLang) : rawDesc);
-    const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
+    const locName = weatherData._locationName || window.userLocation?.formatted || currentUser?.locationName || weatherData.name || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || 'Your Location';
     
     let icon = 'fa-cloud text-blue-500';
     if (condition.includes('Clear')) icon = 'fa-sun text-amber-500';
@@ -1302,7 +1549,7 @@ function updateWeatherModal(weatherData, forecastData = null) {
     const targetLang = currentLanguage || window.currentLanguage || 'hi';
     const temp = Math.round(weatherData.main.temp);
     const feelsLike = Math.round(weatherData.main.feels_like || weatherData.main.temp);
-    const locName = weatherData._locationName || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || weatherData.name || 'Your Location';
+    const locName = weatherData._locationName || window.userLocation?.formatted || currentUser?.locationName || weatherData.name || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : '') || 'Your Location';
     const lat = weatherData._lat || window.userLocation?.lat || 0;
     const lon = weatherData._lon || window.userLocation?.lon || 0;
     
@@ -1927,6 +2174,12 @@ window.showOfflineIndicator = showOfflineIndicator;
 window.changeLanguage = changeLanguage;
 window.updateUserInfo = updateUserInfo;
 window.getUserLocation = getUserLocation;
+window.startLiveLocationTracking = startLiveLocationTracking;
+window.stopLiveLocationTracking = stopLiveLocationTracking;
+window.acquireLivePosition = acquireLivePosition;
+window.fetchIpGeolocation = fetchIpGeolocation;
+window.reverseGeocodeCoords = reverseGeocodeCoords;
+window.calculateDistanceKm = calculateDistanceKm;
 window.autoDetectSignupLocation = autoDetectSignupLocation;
 window.loadDashboardData = loadDashboardData;
 window.searchCustomCityWeather = searchCustomCityWeather;
