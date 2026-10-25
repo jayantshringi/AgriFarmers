@@ -577,10 +577,12 @@
                                 <span class="text-2xl font-bold text-yellow-300" id="farmerName">Farmer</span>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 mt-2">
-                                <span class="inline-flex items-center gap-1.5 text-xs bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full text-white font-medium shadow-inner">
+                                <button type="button" onclick="openSetLocationModal()" title="Click to view or set your farm location"
+                                    class="inline-flex items-center gap-1.5 text-xs bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-1.5 rounded-full text-white font-medium shadow-inner transition-all cursor-pointer active:scale-95 text-left">
                                     <i class="fas fa-location-crosshairs text-yellow-300" id="locationStatusIcon"></i>
                                     <span id="farmerLocation">Detecting live location...</span>
-                                </span>
+                                    <i class="fas fa-pen-to-square text-[10px] opacity-75 hover:opacity-100 ml-0.5"></i>
+                                </button>
                                 <button onclick="getUserLocation(true)" title="Click to detect exact GPS location"
                                     class="text-xs bg-white text-green-800 hover:bg-green-50 font-bold px-3 py-1.5 rounded-full transition-all shadow-sm inline-flex items-center gap-1.5 active:scale-95">
                                     <i class="fas fa-sync-alt text-green-600 text-xs" id="updateGpsIcon"></i>
@@ -818,6 +820,76 @@
                 </p>
             </div> -->
         </footer>
+
+        <!-- Set Farm Location Modal (Cross-device sync & custom search) -->
+        <div id="setFarmLocationModal" class="modal-overlay">
+            <div class="modal-content !max-w-lg">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-map-location-dot text-green-600 text-2xl"></i>
+                            <h3 class="text-xl font-bold text-gray-800" id="setLocationModalTitle">Farm Location Settings</h3>
+                        </div>
+                        <button onclick="closeModal('setFarmLocationModal')" class="text-gray-400 hover:text-gray-600 p-1">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+
+                    <p class="text-xs text-gray-600 mb-4">
+                        Set your exact farm location so weather, market prices, satellite maps, and irrigation advice match your fields on both <strong>mobile and laptop</strong>.
+                    </p>
+
+                    <!-- Current Location Status Card -->
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 mb-4">
+                        <p class="text-[11px] font-bold text-emerald-800 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <i class="fas fa-circle-check text-emerald-600"></i>
+                            <span>Active Farm Location</span>
+                        </p>
+                        <p class="text-sm font-extrabold text-emerald-950" id="currentActiveLocDisplay">Loading...</p>
+                        <p class="text-[11px] text-emerald-700 mt-0.5" id="currentActiveLocDetails">Checking location status...</p>
+                    </div>
+
+                    <!-- Option 1: Search Village / Tehsil / District / Mandi -->
+                    <div class="space-y-2 mb-4">
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Search Village, Mandi, City, or District
+                        </label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <i class="fas fa-magnifying-glass absolute left-3 top-3 text-gray-400 text-sm"></i>
+                                <input type="text" id="farmLocationSearchInput"
+                                    placeholder="e.g. Kota, Barmer, Sanganer, Ludhiana, Pune..."
+                                    onkeydown="if(event.key==='Enter') searchAndSetFarmLocation()"
+                                    class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                            </div>
+                            <button onclick="searchAndSetFarmLocation()" id="searchLocBtn"
+                                class="bg-green-700 hover:bg-green-800 text-white font-bold px-4 py-2 rounded-lg text-sm transition-all shadow-sm flex items-center gap-1.5 active:scale-95">
+                                <i class="fas fa-check"></i>
+                                <span>Set</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative flex py-2 items-center">
+                        <div class="flex-grow border-t border-gray-200"></div>
+                        <span class="flex-shrink mx-3 text-xs font-semibold text-gray-400 uppercase">OR</span>
+                        <div class="flex-grow border-t border-gray-200"></div>
+                    </div>
+
+                    <!-- Option 2: Detect device GPS -->
+                    <div class="mt-2 space-y-2">
+                        <button onclick="detectDeviceGpsAndSet()"
+                            class="w-full bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 font-semibold py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm active:scale-95">
+                            <i class="fas fa-crosshairs text-blue-600"></i>
+                            <span>Use This Device's Live GPS</span>
+                        </button>
+                        <p class="text-[11px] text-gray-500 text-center">
+                            💡 Detecting GPS on your mobile phone automatically syncs your farm coordinates to your laptop account!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- Weather Modal -->
         <div id="weatherModal" class="modal-overlay">
@@ -1494,15 +1566,15 @@
     </div>
 
     <!-- PWA CORE SCRIPT -->
-    <script src="js/translations.js?v=6.9" defer></script>
-    <script src="js/app.js?v=6.9" defer></script>
-    <script src="js/auth-ui.js?v=6.9" defer></script>
+    <script src="js/translations.js?v=7.0" defer></script>
+    <script src="js/app.js?v=7.0" defer></script>
+    <script src="js/auth-ui.js?v=7.0" defer></script>
 
     <!-- AGROVISION PRECISION AGRICULTURE MODULES (ADDITIVE) -->
-    <script src="js/features/crop-doctor.js?v=6.9" defer></script>
-    <script src="js/features/soil-prescription.js?v=6.9" defer></script>
-    <script src="js/features/farm-map.js?v=6.9" defer></script>
-    <script src="js/features/irrigation-planner.js?v=6.9" defer></script>
+    <script src="js/features/crop-doctor.js?v=7.0" defer></script>
+    <script src="js/features/soil-prescription.js?v=7.0" defer></script>
+    <script src="js/features/farm-map.js?v=7.0" defer></script>
+    <script src="js/features/irrigation-planner.js?v=7.0" defer></script>
 
 </body>
 

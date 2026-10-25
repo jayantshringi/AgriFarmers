@@ -194,7 +194,7 @@ const { handleSendOtp, handleVerifyOtp } = createOtpHandler({
     TEXTBEE_SIM_SUBSCRIPTION_ID
 }, httpHelpers);
 
-const { handleCreateUser, handleGetUser, handleUpdateLogin } = createUsersHandler(getDb, httpHelpers);
+const { handleCreateUser, handleGetUser, handleUpdateLogin, handleUpdateLocation } = createUsersHandler(getDb, httpHelpers);
 
 // ─── API Router (Handles both standalone Node & Vercel Functions) ─────────────
 
@@ -271,6 +271,12 @@ async function handleApiRequest(req, res) {
         const loginUpdateMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})\/login$/);
         if (loginUpdateMatch && req.method === 'PUT') {
             await handleUpdateLogin(req, res, loginUpdateMatch[1]);
+            return;
+        }
+
+        const locationUpdateMatch = requestUrl.pathname.match(/^\/api\/users\/(\d{10})\/location$/);
+        if (locationUpdateMatch && req.method === 'PUT') {
+            await handleUpdateLocation(req, res, locationUpdateMatch[1]);
             return;
         }
 

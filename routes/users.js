@@ -123,10 +123,48 @@ function createUsersHandler(getDb, helpers) {
         sendJson(req, res, 200, { user: rowToProfile(data) });
     }
 
+    /** PUT /api/users/:mobile/location — update user's verified farm location */
+    async function handleUpdateLocation(req, res, mobile) {
+        const client = assertDbAvailable();
+
+        if (!mobile || !/^\d{10}$/.test(mobile)) {
+            throw createHttpError(400, 'Invalid mobile number.');
+        }
+
+        const body = await readJsonBody(req);
+        const { location, district, state } = body;
+
+        const updatePayload = {
+            updated_at: new Date().toISOString()
+        };
+        if (location !== undefined) updatePayload.location = location;
+        if (district) updatePayload.district = district;
+        if (state) updatePayload.state = state;
+
+        const { data, error } = await client
+            .from('users')
+            .update(updatePayload)
+            .eq('mobile', mobile)
+            .select()
+            .maybeSingle();
+
+        if (error) {
+            console.error('Supabase updateLocation error:', error);
+            throw createHttpError(500, 'Failed to update location: ' + error.message);
+        }
+
+        if (!data) {
+            throw createHttpError(404, 'User not found.');
+        }
+
+        sendJson(req, res, 200, { user: rowToProfile(data) });
+    }
+
     return {
         handleCreateUser,
         handleGetUser,
         handleUpdateLogin,
+        handleUpdateLocation,
         rowToProfile
     };
 }

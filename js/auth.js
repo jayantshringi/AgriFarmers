@@ -239,11 +239,47 @@ export function signOutUser() {
     clearCurrentSession();
 }
 
+export async function apiUpdateLocation(mobile, locationPayload) {
+    try {
+        const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}/location`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(locationPayload)
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.user || null;
+    } catch (err) {
+        console.warn('apiUpdateLocation notice:', err.message);
+        return null;
+    }
+}
+
+window._updateUserLocation = apiUpdateLocation;
+
 export function initAuthListener() {
     const savedUser = getCurrentSession();
     if (!savedUser) return;
 
     window.currentUser = savedUser;
+
+    // Fetch fresh profile from server in background to sync mobile GPS to laptop
+    if (savedUser.mobile && /^\d{10}$/.test(savedUser.mobile)) {
+        apiGetUser(savedUser.mobile).then(freshUser => {
+            if (freshUser) {
+                window.currentUser = freshUser;
+                setCurrentSession(freshUser);
+                if (freshUser.location && freshUser.location.lat && freshUser.location.lon) {
+                    window.userLocation = freshUser.location;
+                    if (window.renderLocationUI) window.renderLocationUI(freshUser.location, true);
+                    if (window.loadWeatherData) window.loadWeatherData(freshUser.location.lat, freshUser.location.lon, freshUser.location.formatted);
+                    window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: freshUser.location }));
+                }
+            }
+        }).catch(err => console.warn('Background profile sync notice:', err.message));
+    }
+
     if (window.updateUserInfo) window.updateUserInfo();
     if (window.showPage) window.showPage('homePage');
 }

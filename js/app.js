@@ -969,16 +969,18 @@ function renderLocationUI(loc, isLive = true) {
         ? `${loc.lat.toFixed(2)}°N, ${loc.lon.toFixed(2)}°E`
         : '';
 
-    const sourceBadge = loc.source === 'gps'
+    const sourceBadge = (loc.source === 'gps')
         ? `<span class="bg-emerald-500/40 text-emerald-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Live GPS</span>`
-        : loc.source === 'ip'
-            ? `<span class="bg-sky-500/40 text-sky-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Live Net</span>`
-            : `<span class="bg-amber-500/40 text-amber-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">Profile</span>`;
+        : (loc.source === 'verified_farm' || loc.source === 'manual_verified')
+            ? `<span class="bg-emerald-600/80 text-white text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Farm (Synced)</span>`
+            : loc.source === 'ip'
+                ? `<span class="bg-sky-500/40 text-sky-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Net IP</span>`
+                : `<span class="bg-amber-500/40 text-amber-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">Profile</span>`;
 
     farmerLocation.innerHTML = `<span class="font-bold">${formattedLoc}</span> ${coordsStr ? `<span class="text-[10px] opacity-80 font-mono">(${coordsStr})</span>` : ''} ${sourceBadge}`;
 
     if (statusIcon) {
-        statusIcon.className = loc.source === 'gps' 
+        statusIcon.className = (loc.source === 'gps' || loc.source === 'verified_farm' || loc.source === 'manual_verified')
             ? 'fas fa-location-crosshairs text-yellow-300' 
             : 'fas fa-location-dot text-emerald-200';
     }
@@ -1224,30 +1226,55 @@ async function getUserLocation(forceRefresh = false) {
             accuracy = rawPos.accuracy || 100;
             source = rawPos.source || 'gps';
 
-            // High precision reverse geocode to get real-time city & district
-            const geo = await reverseGeocodeCoords(lat, lon);
-            city = geo?.city || rawPos.city || currentUser?.district || 'Your Location';
-            state = geo?.state || rawPos.state || currentUser?.state || '';
-            formatted = geo?.formatted || rawPos.formatted || ((city && state) ? `${city}, ${state}` : city);
+            // Cross-device Cloud Farm Sync:
+            // If running on a laptop or desktop where only IP geolocation is available,
+            // check if user has a verified farm location saved in their cloud profile (from mobile GPS or signup).
+            // Prioritize the user's verified farm coordinates so laptop displays the exact same farm as mobile!
+            if (source === 'ip' && currentUser?.location && currentUser.location.lat && currentUser.location.lon && !forceRefresh) {
+                console.log('🌾 Using verified farm location from cloud profile (matches mobile GPS)');
+                lat = currentUser.location.lat;
+                lon = currentUser.location.lon;
+                accuracy = currentUser.location.accuracy || 20;
+                source = 'verified_farm';
+                city = currentUser.district || currentUser.location.city || 'Your Farm';
+                state = currentUser.state || currentUser.location.state || '';
+                formatted = currentUser.locationName || currentUser.location.formatted || ((city && state) ? `${city}, ${state}` : city);
+            } else {
+                // High precision reverse geocode to get real-time city & district
+                const geo = await reverseGeocodeCoords(lat, lon);
+                city = geo?.city || rawPos.city || currentUser?.district || 'Your Location';
+                state = geo?.state || rawPos.state || currentUser?.state || '';
+                formatted = geo?.formatted || rawPos.formatted || ((city && state) ? `${city}, ${state}` : city);
+            }
         } else {
-            // Regional default fallback
-            source = 'fallback';
-            const fallbackCity = currentUser?.district || 'Ludhiana';
-            const fallbackState = currentUser?.state || 'Punjab';
-            const stateCenters = {
-                'Haryana': { lat: 29.6857, lon: 76.9905 },
-                'Rajasthan': { lat: 26.8124, lon: 75.7623 },
-                'Uttar Pradesh': { lat: 26.8467, lon: 80.9462 },
-                'Maharashtra': { lat: 19.7515, lon: 75.7139 },
-                'Punjab': { lat: 30.9010, lon: 75.8573 }
-            };
-            const defaultCoords = (currentUser?.state && stateCenters[currentUser.state]) || { lat: 30.9010, lon: 75.8573 };
-            lat = defaultCoords.lat;
-            lon = defaultCoords.lon;
-            accuracy = 10000;
-            city = fallbackCity;
-            state = fallbackState;
-            formatted = `${fallbackCity}, ${fallbackState}`;
+            // Regional default fallback or user registered location
+            if (currentUser?.location && currentUser.location.lat && currentUser.location.lon) {
+                lat = currentUser.location.lat;
+                lon = currentUser.location.lon;
+                accuracy = 50;
+                source = 'verified_farm';
+                city = currentUser.district || currentUser.location.city || 'Your Farm';
+                state = currentUser.state || currentUser.location.state || '';
+                formatted = currentUser.locationName || currentUser.location.formatted || `${city}, ${state}`;
+            } else {
+                source = 'fallback';
+                const fallbackCity = currentUser?.district || 'Jaipur';
+                const fallbackState = currentUser?.state || 'Rajasthan';
+                const stateCenters = {
+                    'Haryana': { lat: 29.6857, lon: 76.9905 },
+                    'Rajasthan': { lat: 26.8124, lon: 75.7623 },
+                    'Uttar Pradesh': { lat: 26.8467, lon: 80.9462 },
+                    'Maharashtra': { lat: 19.7515, lon: 75.7139 },
+                    'Punjab': { lat: 30.9010, lon: 75.8573 }
+                };
+                const defaultCoords = (currentUser?.state && stateCenters[currentUser.state]) || { lat: 26.8124, lon: 75.7623 };
+                lat = defaultCoords.lat;
+                lon = defaultCoords.lon;
+                accuracy = 10000;
+                city = fallbackCity;
+                state = fallbackState;
+                formatted = `${fallbackCity}, ${fallbackState}`;
+            }
         }
 
         userLocation = {
@@ -1267,21 +1294,38 @@ async function getUserLocation(forceRefresh = false) {
 
         // Persist to user profile
         if (currentUser) {
-            currentUser.district = city;
-            if (state) currentUser.state = state;
-            currentUser.locationName = formatted;
-            currentUser.location = { lat, lon, accuracy, source };
-            localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
+            // Only update district/state if this was genuine GPS or manual verified location (NOT rough laptop IP override)
+            if (source !== 'ip') {
+                currentUser.district = city;
+                if (state) currentUser.state = state;
+                currentUser.locationName = formatted;
+                currentUser.location = { lat, lon, accuracy, source, city, state, formatted };
+                localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
+
+                // If mobile detected accurate GPS, automatically sync to cloud profile so laptop sees it!
+                if (source === 'gps' && currentUser.mobile && window._updateUserLocation) {
+                    window._updateUserLocation(currentUser.mobile, {
+                        location: currentUser.location,
+                        district: city,
+                        state: state
+                    }).catch(err => console.warn('Cloud location sync error:', err.message));
+                }
+            } else {
+                // For laptop IP, store in session but preserve registered farm profile
+                currentUser.location = currentUser.location || { lat, lon, accuracy, source, city, state, formatted };
+            }
         }
 
         // Notify user if force refreshed
         if (forceRefresh) {
             if (source === 'gps') {
-                showToast(`📍 Live GPS Detected: ${formatted} (±${Math.round(accuracy)}m)`, 'success');
+                showToast(`📍 Live Mobile GPS: ${formatted} (±${Math.round(accuracy)}m) • Synced to Cloud!`, 'success');
+            } else if (source === 'verified_farm' || source === 'manual_verified') {
+                showToast(`🌾 Using Verified Farm: ${formatted} (Synced with Account)`, 'success');
             } else if (source === 'ip') {
-                showToast(`📍 Live Location Detected: ${formatted} (via Network)`, 'success');
+                showToast(`📍 Network Location: ${formatted}. Set your exact farm location to sync across devices.`, 'info');
             } else {
-                showToast(`📍 Location set to ${formatted}. Enable GPS in browser for real-time tracking.`, 'info');
+                showToast(`📍 Location set to ${formatted}.`, 'info');
             }
         }
 
@@ -1305,6 +1349,117 @@ async function getUserLocation(forceRefresh = false) {
 
     loadMarketData();
     loadSeedRecommendations();
+}
+
+// Open Set Farm Location modal
+function openSetLocationModal() {
+    const modal = document.getElementById('setFarmLocationModal');
+    if (!modal) return;
+
+    const activeDisplay = document.getElementById('currentActiveLocDisplay');
+    const activeDetails = document.getElementById('currentActiveLocDetails');
+    const input = document.getElementById('farmLocationSearchInput');
+
+    if (activeDisplay) {
+        activeDisplay.textContent = window.userLocation?.formatted || currentUser?.locationName || (currentUser?.district ? `${currentUser.district}, ${currentUser.state || ''}` : 'Location not set');
+    }
+    if (activeDetails) {
+        const src = window.userLocation?.source || 'profile';
+        const srcText = src === 'gps' ? 'Live Mobile GPS' : (src === 'verified_farm' || src === 'manual_verified') ? 'Verified Farm (Synced Across Devices)' : src === 'ip' ? 'Laptop Network / ISP' : 'Profile Default';
+        const coords = (window.userLocation?.lat && window.userLocation?.lon) ? `${window.userLocation.lat.toFixed(3)}°N, ${window.userLocation.lon.toFixed(3)}°E` : '';
+        activeDetails.textContent = coords ? `${srcText} • ${coords}` : srcText;
+    }
+    if (input) input.value = '';
+
+    modal.classList.add('active');
+}
+
+// Search any city, district, village or mandi and lock it as farm location
+async function searchAndSetFarmLocation() {
+    const input = document.getElementById('farmLocationSearchInput');
+    const btn = document.getElementById('searchLocBtn');
+    const query = input?.value?.trim();
+
+    if (!query) {
+        showToast('Please enter a village, city or district name', 'error');
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; }
+
+    try {
+        const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)},IN&limit=1&appid=${apiKey}`);
+
+        let found = false;
+        let item = null;
+        if (geoRes.ok) {
+            const list = await geoRes.json();
+            if (Array.isArray(list) && list.length > 0) {
+                item = list[0];
+                found = true;
+            }
+        }
+
+        if (!found) {
+            showToast('Location not found. Please try entering a district or major town nearby.', 'error');
+            if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-check"></i><span>Set</span>`; }
+            return;
+        }
+
+        const city = item.name;
+        const state = item.state || '';
+        const formatted = state ? `${city}, ${state}` : city;
+        const newLocation = {
+            lat: item.lat,
+            lon: item.lon,
+            accuracy: 15,
+            source: 'manual_verified',
+            city,
+            state,
+            formatted,
+            timestamp: Date.now()
+        };
+
+        window.userLocation = newLocation;
+        userLocation = newLocation;
+
+        if (currentUser) {
+            currentUser.district = city;
+            if (state) currentUser.state = state;
+            currentUser.locationName = formatted;
+            currentUser.location = newLocation;
+            localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
+
+            // Sync to cloud so other devices (e.g. mobile/laptop) immediately inherit it
+            if (currentUser.mobile && window._updateUserLocation) {
+                window._updateUserLocation(currentUser.mobile, {
+                    location: newLocation,
+                    district: city,
+                    state: state
+                }).catch(err => console.warn('Cloud sync error:', err.message));
+            }
+        }
+
+        renderLocationUI(newLocation, true);
+        window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: newLocation }));
+        loadWeatherData(newLocation.lat, newLocation.lon, formatted);
+
+        closeModal('setFarmLocationModal');
+        showToast(`🌾 Farm location set to ${formatted} and synced across all devices!`, 'success');
+
+    } catch (err) {
+        console.error('Error setting farm location:', err);
+        showToast('Failed to set location. Please try again.', 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-check"></i><span>Set</span>`; }
+    }
+}
+
+// Trigger device GPS detection and close modal
+function detectDeviceGpsAndSet() {
+    closeModal('setFarmLocationModal');
+    getUserLocation(true);
 }
 
 // Load dashboard data - reuses fresh location (< 5 min old) or fetches live
@@ -2183,6 +2338,9 @@ window.calculateDistanceKm = calculateDistanceKm;
 window.autoDetectSignupLocation = autoDetectSignupLocation;
 window.loadDashboardData = loadDashboardData;
 window.searchCustomCityWeather = searchCustomCityWeather;
+window.openSetLocationModal = openSetLocationModal;
+window.searchAndSetFarmLocation = searchAndSetFarmLocation;
+window.detectDeviceGpsAndSet = detectDeviceGpsAndSet;
 
 // Close modals when clicking outside
 document.addEventListener('click', function(event) {
