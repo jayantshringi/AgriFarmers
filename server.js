@@ -2,6 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 const { createOtpHandler } = require('./routes/otp');
@@ -13,7 +14,9 @@ loadDotEnv(path.join(__dirname, '.env'));
 const PORT = Number(process.env.PORT || 3000);
 const TEXTBEE_API_KEY = process.env.TEXTBEE_API_KEY || '';
 const TEXTBEE_DEVICE_ID = process.env.TEXTBEE_DEVICE_ID || '';
-const OTP_SECRET = process.env.OTP_SECRET || TEXTBEE_API_KEY || 'development-otp-secret';
+const OTP_SECRET = process.env.OTP_SECRET || TEXTBEE_API_KEY || (process.env.NODE_ENV === 'production'
+    ? crypto.randomBytes(32).toString('hex')
+    : 'development-otp-secret');
 const OTP_TTL_SECONDS = Number(process.env.OTP_TTL_SECONDS || 120);
 const OTP_RESEND_SECONDS = Number(process.env.OTP_RESEND_SECONDS || 30);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
@@ -108,9 +111,21 @@ async function initDb() {
     }
 }
 
-// ─── HTTP Helpers ─────────────────────────────────────────────────────────────
+// ─── HTTP Helpers & Security Hardening ───────────────────────────────────────
+
+function setSecurityHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(self), camera=(self), microphone=()');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    if (process.env.NODE_ENV === 'production') {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    }
+}
 
 function sendJson(req, res, statusCode, payload) {
+    setSecurityHeaders(res);
     setCorsHeaders(req, res);
     res.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify(payload));
@@ -123,25 +138,66 @@ function createHttpError(statusCode, message, extra = {}) {
     return error;
 }
 
+// Global in-memory sliding-window IP rate limiter
+const rateLimitBuckets = new Map();
+
+function checkRateLimit(req, maxRequests = 120, windowMs = 60000) {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ip = (typeof forwardedFor === 'string' && forwardedFor.trim())
+        ? forwardedFor.split(',')[0].trim()
+        : (req.socket?.remoteAddress || 'unknown');
+
+    const now = Date.now();
+    const timestamps = (rateLimitBuckets.get(ip) || []).filter(ts => now - ts < windowMs);
+
+    if (timestamps.length >= maxRequests) {
+        return false;
+    }
+
+    timestamps.push(now);
+    rateLimitBuckets.set(ip, timestamps);
+
+    if (rateLimitBuckets.size > 5000) {
+        for (const [k, v] of rateLimitBuckets.entries()) {
+            if (v.every(ts => now - ts >= windowMs)) {
+                rateLimitBuckets.delete(k);
+            }
+        }
+    }
+    return true;
+}
+
 function getAllowedOrigin(req) {
     const requestOrigin = req.headers.origin;
+    if (!requestOrigin) return null;
+
+    const trustedOrigins = [
+        'https://agrifarmers.vercel.app',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000'
+    ];
+
     const configuredOrigins = (process.env.CORS_ORIGIN || '')
         .split(',')
         .map(origin => origin.trim())
         .filter(Boolean);
 
-    if (!requestOrigin) return '*';
-    if (configuredOrigins.length === 0 || configuredOrigins.includes('*')) return requestOrigin;
-    return configuredOrigins.includes(requestOrigin) ? requestOrigin : null;
+    for (const origin of configuredOrigins) {
+        if (!trustedOrigins.includes(origin)) {
+            trustedOrigins.push(origin);
+        }
+    }
+
+    return trustedOrigins.includes(requestOrigin) ? requestOrigin : null;
 }
 
 function setCorsHeaders(req, res) {
     const allowedOrigin = getAllowedOrigin(req);
     if (allowedOrigin) {
         res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-        if (allowedOrigin !== '*') {
-            res.setHeader('Access-Control-Allow-Credentials', 'true');
-        }
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
@@ -183,7 +239,7 @@ async function readJsonBody(req) {
 
 const httpHelpers = { sendJson, readJsonBody, createHttpError };
 
-const { handleSendOtp, handleVerifyOtp } = createOtpHandler({
+const { handleSendOtp, handleVerifyOtp, verifySessionToken } = createOtpHandler({
     TEXTBEE_API_KEY,
     TEXTBEE_DEVICE_ID,
     OTP_SECRET,
@@ -194,7 +250,10 @@ const { handleSendOtp, handleVerifyOtp } = createOtpHandler({
     TEXTBEE_SIM_SUBSCRIPTION_ID
 }, httpHelpers);
 
-const { handleCreateUser, handleGetUser, handleUpdateLogin, handleUpdateLocation } = createUsersHandler(getDb, httpHelpers);
+const { handleCreateUser, handleGetUser, handleUpdateLogin, handleUpdateLocation } = createUsersHandler(getDb, httpHelpers, {
+    OTP_SECRET,
+    verifySessionToken
+});
 
 // ─── API Router (Handles both standalone Node & Vercel Functions) ─────────────
 
@@ -220,6 +279,16 @@ async function handleApiRequest(req, res) {
             setCorsHeaders(req, res);
             res.writeHead(204);
             res.end();
+            return;
+        }
+
+        // Global rate limit check for API endpoints (120 req/min per IP)
+        if (!checkRateLimit(req, 120, 60000)) {
+            sendJson(req, res, 429, {
+                error: 'Too Many Requests',
+                message: 'API rate limit exceeded. Please wait a moment before sending more requests.',
+                retryAfterSeconds: 30
+            });
             return;
         }
 
@@ -350,6 +419,7 @@ async function serveStaticFile(req, res) {
         const extension = path.extname(filePath).toLowerCase();
         const contentType = mimeTypes[extension] || 'application/octet-stream';
 
+        setSecurityHeaders(res);
         res.writeHead(200, { 'Content-Type': contentType });
         if (req.method === 'HEAD') {
             res.end();
@@ -357,6 +427,7 @@ async function serveStaticFile(req, res) {
         }
         fs.createReadStream(filePath).pipe(res);
     } catch (_) {
+        setSecurityHeaders(res);
         res.writeHead(404);
         res.end('Not found');
     }

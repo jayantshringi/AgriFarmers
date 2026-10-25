@@ -140,6 +140,21 @@ function updatePWAStatus() {
     }
 }
 
+// HTML escaping utility to neutralize XSS in dynamic DOM interpolations
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getOpenWeatherApiKey() {
+    return window.AGRIFARMERS_CONFIG?.openWeatherApiKey || window.AGRIFARMERS_OPENWEATHER_KEY || '';
+}
+
 // Show toast notification (single definition — used by both PWA and app sections)
 function showToast(message, type = 'success') {
     document.querySelectorAll('.custom-toast').forEach(t => t.remove());
@@ -151,7 +166,7 @@ function showToast(message, type = 'success') {
                : type === 'error'   ? 'fa-exclamation-circle'
                :                      'fa-info-circle';
     toast.className = `custom-toast ${colorClass}`;
-    toast.innerHTML = `<div class="flex items-center"><i class="fas ${icon} mr-2"></i><span>${message}</span></div>`;
+    toast.innerHTML = `<div class="flex items-center"><i class="fas ${icon} mr-2"></i><span>${escapeHtml(message)}</span></div>`;
     document.body.appendChild(toast);
     setTimeout(() => {
         toast.classList.add('opacity-0');
@@ -165,9 +180,9 @@ function initPWA() {
     updatePWAStatus();
     setInterval(updatePWAStatus, 5000);
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js?v=7.3')
+        navigator.serviceWorker.register('./service-worker.js?v=7.4')
             .then(registration => {
-                console.log('✅ Service Worker v7.3 registered:', registration.scope);
+                console.log('✅ Service Worker v7.4 registered:', registration.scope);
                 // Immediately check server for new worker
                 registration.update().catch(() => {});
                 
@@ -975,7 +990,7 @@ async function fetchIpGeolocation() {
 
 // Multi-tier high-accuracy reverse geocoding
 async function reverseGeocodeCoords(lat, lon) {
-    const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+    const apiKey = getOpenWeatherApiKey();
     
     // Tier 1: OpenWeather Geocoding API (Fast & highly accurate for India)
     try {
@@ -1069,7 +1084,7 @@ function renderLocationUI(loc, isLive = true) {
                 ? `<span class="bg-sky-500/40 text-sky-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">● Net IP</span>`
                 : `<span class="bg-amber-500/40 text-amber-100 text-[10px] px-1.5 py-0.5 rounded font-mono ml-1 font-bold">Profile</span>`;
 
-    farmerLocation.innerHTML = `<span class="font-bold">${formattedLoc}</span> ${coordsStr ? `<span class="text-[10px] opacity-80 font-mono">(${coordsStr})</span>` : ''} ${sourceBadge}`;
+    farmerLocation.innerHTML = `<span class="font-bold">${escapeHtml(formattedLoc)}</span> ${coordsStr ? `<span class="text-[10px] opacity-80 font-mono">(${coordsStr})</span>` : ''} ${sourceBadge}`;
 
     if (statusIcon) {
         statusIcon.className = (loc.source === 'gps' || loc.source === 'verified_farm' || loc.source === 'manual_verified')
@@ -1092,9 +1107,9 @@ function updateUserInfo() {
         if (window.userLocation && window.userLocation.formatted) {
             renderLocationUI(window.userLocation, window.userLocation.source !== 'fallback');
         } else if (currentUser.locationName) {
-            farmerLocation.innerHTML = `<span class="font-bold">${cleanLocationName(currentUser.locationName)}</span>`;
+            farmerLocation.innerHTML = `<span class="font-bold">${escapeHtml(cleanLocationName(currentUser.locationName))}</span>`;
         } else if (currentUser.district && currentUser.state) {
-            farmerLocation.innerHTML = `<span class="font-bold">${cleanLocationName(currentUser.district)}, ${currentUser.state}</span>`;
+            farmerLocation.innerHTML = `<span class="font-bold">${escapeHtml(cleanLocationName(currentUser.district))}, ${escapeHtml(currentUser.state)}</span>`;
         }
     }
 }
@@ -1480,7 +1495,7 @@ async function searchAndSetFarmLocation() {
     if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; }
 
     try {
-        const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+        const apiKey = getOpenWeatherApiKey();
         const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)},IN&limit=1&appid=${apiKey}`);
 
         let found = false;
@@ -1568,7 +1583,7 @@ function loadDashboardData() {
 // Load weather data using REAL API
 async function loadWeatherData(lat, lon, customLocationName = null) {
     try {
-        const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+        const apiKey = getOpenWeatherApiKey();
         
         // 1. Fetch current weather
         const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
@@ -1654,7 +1669,7 @@ async function searchCustomCityWeather() {
     }
 
     try {
-        const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
+        const apiKey = getOpenWeatherApiKey();
         const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},IN&limit=1&appid=${apiKey}`);
         if (geoRes.ok) {
             const list = await geoRes.json();
@@ -1768,7 +1783,7 @@ function updateWeatherCard(weatherData) {
                 <p class="text-gray-600 capitalize text-sm font-medium">${weatherDesc}</p>
                 <p class="text-xs text-green-700 font-bold mt-1.5 flex items-center gap-1">
                     <i class="fas fa-location-crosshairs text-green-600"></i>
-                    <span class="truncate max-w-[150px]">${locName}</span>
+                    <span class="truncate max-w-[150px]">${escapeHtml(locName)}</span>
                 </p>
             </div>
             <div class="text-right space-y-1">
@@ -1905,7 +1920,7 @@ function updateWeatherModal(weatherData, forecastData = null) {
                     </div>
                     <h3 class="text-lg font-bold text-white mt-1 flex items-center gap-1.5">
                         <i class="fas fa-location-crosshairs text-yellow-300 text-base"></i>
-                        <span>${locName}</span>
+                        <span>${escapeHtml(locName)}</span>
                     </h3>
                 </div>
                 <button onclick="getUserLocation(true)"

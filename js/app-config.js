@@ -16,6 +16,8 @@
     const VERCEL_BACKEND_URL = 'https://agrifarmers.vercel.app';
 
     window.AGRIFARMERS_CONFIG = {
-        otpApiBaseUrl: isSameOrigin ? '' : VERCEL_BACKEND_URL
+        otpApiBaseUrl: isSameOrigin ? '' : VERCEL_BACKEND_URL,
+        // OpenWeather API key can be configured via environment or runtime global
+        openWeatherApiKey: window.AGRIFARMERS_OPENWEATHER_KEY || ''
     };
 })();

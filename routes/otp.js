@@ -8,6 +8,7 @@ const crypto = require('node:crypto');
 // In-memory state for local standalone Node server sessions
 const otpStore = new Map();
 const sendHistory = new Map();
+const verifyHistory = new Map();
 
 function createOtpHandler(config, helpers) {
     const {
@@ -102,6 +103,51 @@ function createOtpHandler(config, helpers) {
         }
     }
 
+    // ── Session token creation & verification ───────────────────────────────────
+
+    const SESSION_TTL_SECONDS = 30 * 24 * 60 * 60; // 30 days
+
+    function createSessionToken(phoneNumber, secret = OTP_SECRET, ttlSeconds = SESSION_TTL_SECONDS) {
+        const issuedAt = Date.now();
+        const expiresAt = issuedAt + (ttlSeconds * 1000);
+        const payload = `${phoneNumber}|${issuedAt}|${expiresAt}`;
+        const signature = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+        return Buffer.from(`${payload}|${signature}`).toString('base64url');
+    }
+
+    function verifySessionToken(token, expectedPhoneNumber, secret = OTP_SECRET) {
+        try {
+            if (!token) return false;
+            const decoded = Buffer.from(token, 'base64url').toString('utf8');
+            const parts = decoded.split('|');
+            if (parts.length !== 4) return false;
+            const [phone, issuedAt, expiresAtStr, sig] = parts;
+            const expiresAt = Number(expiresAtStr);
+            if (Date.now() > expiresAt) return false;
+
+            const payload = `${phone}|${issuedAt}|${expiresAtStr}`;
+            const expectedSig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
+
+            const first = Buffer.from(sig, 'hex');
+            const second = Buffer.from(expectedSig, 'hex');
+            if (first.length !== second.length || !crypto.timingSafeEqual(first, second)) {
+                return false;
+            }
+
+            if (expectedPhoneNumber) {
+                const cleanTarget = expectedPhoneNumber.replace(/\D/g, '').slice(-10);
+                const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+                if (cleanTarget !== cleanPhone) {
+                    return false;
+                }
+            }
+
+            return { phone, issuedAt: Number(issuedAt), expiresAt };
+        } catch (_) {
+            return false;
+        }
+    }
+
     // ── Rate limiting helpers ───────────────────────────────────────────────────
 
     function getCookie(req, name) {
@@ -159,6 +205,17 @@ function createOtpHandler(config, helpers) {
         const timestamps = sendHistory.get(key) || [];
         timestamps.push(now);
         sendHistory.set(key, timestamps);
+    }
+
+    function assertVerifyAllowed(req, phoneNumber, now) {
+        const oldestAllowed = now - 60 * 1000;
+        const key = `${getClientIp(req)}:${phoneNumber}`;
+        const timestamps = (verifyHistory.get(key) || []).filter(ts => ts >= oldestAllowed);
+        if (timestamps.length >= 10) {
+            throw createHttpError(429, 'Too many verification attempts. Please wait 60 seconds before trying again.');
+        }
+        timestamps.push(now);
+        verifyHistory.set(key, timestamps);
     }
 
     // ── TextBee SMS dispatch ────────────────────────────────────────────────────
@@ -238,6 +295,8 @@ function createOtpHandler(config, helpers) {
         const otp = validateOtp(body.otp);
         const now = Date.now();
 
+        assertVerifyAllowed(req, phoneNumber, now);
+
         const record = otpStore.get(phoneNumber);
         let verified = false;
 
@@ -271,13 +330,24 @@ function createOtpHandler(config, helpers) {
             throw createHttpError(401, 'Invalid or expired OTP.');
         }
 
-        res.setHeader('Set-Cookie', 'agrifarmers_otp=; Path=/api/otp; HttpOnly; SameSite=Lax; Max-Age=0');
-        sendJson(req, res, 200, { verified: true });
+        const sessionToken = createSessionToken(phoneNumber, OTP_SECRET);
+
+        res.setHeader('Set-Cookie', [
+            'agrifarmers_otp=; Path=/api/otp; HttpOnly; SameSite=Lax; Max-Age=0',
+            `agrifarmers_session=${sessionToken}; Path=/api; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_SECONDS}`
+        ]);
+        sendJson(req, res, 200, {
+            verified: true,
+            sessionToken,
+            expiresInSeconds: SESSION_TTL_SECONDS
+        });
     }
 
     return {
         handleSendOtp,
-        handleVerifyOtp
+        handleVerifyOtp,
+        createSessionToken,
+        verifySessionToken
     };
 }
 

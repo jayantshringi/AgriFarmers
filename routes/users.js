@@ -3,8 +3,40 @@
  * Modular route handler for /api/users
  */
 
-function createUsersHandler(getDb, helpers) {
+function createUsersHandler(getDb, helpers, config = {}) {
     const { sendJson, readJsonBody, createHttpError } = helpers;
+    const { OTP_SECRET = 'development-otp-secret', verifySessionToken } = config;
+
+    function getAuthToken(req) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            return authHeader.slice(7).trim();
+        }
+        const cookieHeader = req.headers.cookie;
+        if (cookieHeader) {
+            const cookies = cookieHeader.split(';');
+            for (const cookie of cookies) {
+                const [k, v] = cookie.trim().split('=');
+                if (k === 'agrifarmers_session') return decodeURIComponent(v);
+            }
+        }
+        return null;
+    }
+
+    function assertAuthorized(req, mobile) {
+        const token = getAuthToken(req);
+        if (!token) {
+            throw createHttpError(401, 'Authentication required. Please sign in with OTP.');
+        }
+
+        if (typeof verifySessionToken === 'function') {
+            const cleanTarget = String(mobile || '').replace(/\D/g, '').slice(-10);
+            const verified = verifySessionToken(token, cleanTarget, OTP_SECRET);
+            if (!verified) {
+                throw createHttpError(403, 'Forbidden: You do not have permission to access or modify this profile.');
+            }
+        }
+    }
 
     function assertDbAvailable() {
         const client = getDb();
@@ -32,14 +64,17 @@ function createUsersHandler(getDb, helpers) {
 
     /** POST /api/users — create or update user profile */
     async function handleCreateUser(req, res) {
-        const client = assertDbAvailable();
-
         const body = await readJsonBody(req);
         const { mobile, uid, name, state, district, location } = body;
 
         if (!mobile || !/^\d{10}$/.test(mobile)) {
             throw createHttpError(400, 'Invalid mobile number.');
         }
+
+        assertAuthorized(req, mobile);
+
+        const client = assertDbAvailable();
+
         if (!name || name.trim().length < 2) {
             throw createHttpError(400, 'Name must be at least 2 characters.');
         }
@@ -72,11 +107,13 @@ function createUsersHandler(getDb, helpers) {
 
     /** GET /api/users/:mobile — fetch user profile */
     async function handleGetUser(req, res, mobile) {
-        const client = assertDbAvailable();
-
         if (!mobile || !/^\d{10}$/.test(mobile)) {
             throw createHttpError(400, 'Invalid mobile number.');
         }
+
+        assertAuthorized(req, mobile);
+
+        const client = assertDbAvailable();
 
         const { data, error } = await client
             .from('users')
@@ -98,11 +135,13 @@ function createUsersHandler(getDb, helpers) {
 
     /** PUT /api/users/:mobile/login — update last_login timestamp */
     async function handleUpdateLogin(req, res, mobile) {
-        const client = assertDbAvailable();
-
         if (!mobile || !/^\d{10}$/.test(mobile)) {
             throw createHttpError(400, 'Invalid mobile number.');
         }
+
+        assertAuthorized(req, mobile);
+
+        const client = assertDbAvailable();
 
         const { data, error } = await client
             .from('users')
@@ -125,11 +164,13 @@ function createUsersHandler(getDb, helpers) {
 
     /** PUT /api/users/:mobile/location — update user's verified farm location */
     async function handleUpdateLocation(req, res, mobile) {
-        const client = assertDbAvailable();
-
         if (!mobile || !/^\d{10}$/.test(mobile)) {
             throw createHttpError(400, 'Invalid mobile number.');
         }
+
+        assertAuthorized(req, mobile);
+
+        const client = assertDbAvailable();
 
         const body = await readJsonBody(req);
         const { location, district, state } = body;

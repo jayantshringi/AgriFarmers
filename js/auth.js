@@ -42,6 +42,17 @@ function maskPhoneNumber(phoneNumber) {
 }
 
 let activeOtpToken = null;
+let activeSessionToken = null;
+
+function getAuthHeaders() {
+    const session = getCurrentSession();
+    const token = activeSessionToken || session?.sessionToken || '';
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
 
 function getOtpApiBaseUrl() {
     const configuredBaseUrl = window.AGRIFARMERS_CONFIG?.otpApiBaseUrl || '';
@@ -69,6 +80,9 @@ async function postOtpRequest(endpoint, payload) {
     if (result.otpToken) {
         activeOtpToken = result.otpToken;
     }
+    if (result.sessionToken) {
+        activeSessionToken = result.sessionToken;
+    }
 
     if (!response.ok) {
         throw new Error(result.message || result.error || 'OTP request failed. Please try again.');
@@ -81,9 +95,15 @@ async function postOtpRequest(endpoint, payload) {
 
 async function apiGetUser(mobile) {
     const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}`, {
+        headers: getAuthHeaders(),
         credentials: 'include'
     });
     if (response.status === 404) return null;
+    if (response.status === 401 || response.status === 403) {
+        const err = new Error('Authentication required');
+        err.statusCode = response.status;
+        throw err;
+    }
     if (!response.ok) throw new Error('Failed to fetch user profile.');
     const data = await response.json();
     return data.user || null;
@@ -92,7 +112,7 @@ async function apiGetUser(mobile) {
 async function apiCreateUser(profile) {
     const response = await fetch(`${getOtpApiBaseUrl()}/api/users`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(profile)
     });
@@ -110,6 +130,7 @@ async function apiCreateUser(profile) {
 async function apiUpdateLogin(mobile) {
     const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}/login`, {
         method: 'PUT',
+        headers: getAuthHeaders(),
         credentials: 'include'
     });
 
@@ -171,8 +192,9 @@ export async function verifyOTPWithTextBee(otpCode) {
     }
 
     // Verify the OTP with the server
+    let verifyResult = {};
     try {
-        await postOtpRequest('verify', { phoneNumber, otp: entered });
+        verifyResult = await postOtpRequest('verify', { phoneNumber, otp: entered });
     } catch (error) {
         console.error('TextBee OTP verification error:', error);
         if (window.showToast) window.showToast(error.message, 'error');
@@ -215,6 +237,11 @@ export async function verifyOTPWithTextBee(otpCode) {
             if (window.showToast) window.showToast(`Welcome back, ${profile.name}!`, 'success');
         }
 
+        if (verifyResult.sessionToken) {
+            profile.sessionToken = verifyResult.sessionToken;
+            activeSessionToken = verifyResult.sessionToken;
+        }
+
         window.currentUser = profile;
         setCurrentSession(profile);
 
@@ -235,6 +262,7 @@ export function setPendingSignupData(data) {
 }
 
 export function signOutUser() {
+    activeSessionToken = null;
     window.currentUser = null;
     clearCurrentSession();
 }
@@ -243,7 +271,7 @@ export async function apiUpdateLocation(mobile, locationPayload) {
     try {
         const response = await fetch(`${getOtpApiBaseUrl()}/api/users/${mobile}/location`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: getAuthHeaders(),
             credentials: 'include',
             body: JSON.stringify(locationPayload)
         });
@@ -261,6 +289,10 @@ window._updateUserLocation = apiUpdateLocation;
 export function initAuthListener() {
     const savedUser = getCurrentSession();
     if (!savedUser) return;
+
+    if (savedUser.sessionToken) {
+        activeSessionToken = savedUser.sessionToken;
+    }
 
     window.currentUser = savedUser;
 
