@@ -165,9 +165,9 @@ function initPWA() {
     updatePWAStatus();
     setInterval(updatePWAStatus, 5000);
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js?v=7.2')
+        navigator.serviceWorker.register('./service-worker.js?v=7.3')
             .then(registration => {
-                console.log('✅ Service Worker v7.2 registered:', registration.scope);
+                console.log('✅ Service Worker v7.3 registered:', registration.scope);
                 // Immediately check server for new worker
                 registration.update().catch(() => {});
                 
@@ -185,11 +185,11 @@ function initPWA() {
             })
             .catch(err => console.error('❌ Service Worker registration failed:', err));
 
-        // Purge obsolete caches on window side to clear old v6.8 assets
+        // Purge obsolete caches on window side to clear old assets
         if ('caches' in window) {
             caches.keys().then(keys => {
                 keys.forEach(k => {
-                    if (k !== 'agrifarmers-static-v7.2' && k !== 'agrifarmers-v7.2') {
+                    if (k !== 'agrifarmers-static-v7.3' && k !== 'agrifarmers-v7.3') {
                         console.log('🧹 Purging obsolete window cache:', k);
                         caches.delete(k);
                     }
@@ -232,12 +232,24 @@ function cleanLocationName(rawName) {
         .replace(/^,\s*|\s*,\s*$/g, '')
         .trim();
 
-    // Normalize Amber / Amer in Rajasthan
-    if (/\b(Amber|Amer)\b/i.test(cleaned) && /\bRajasthan\b/i.test(cleaned) && !/\bJaipur\b/i.test(cleaned)) {
-        cleaned = cleaned.replace(/\b(Amber|Amer)(?:\s*,\s*|\s+)Rajasthan\b/i, 'Amer, Jaipur, Rajasthan');
-    } else if (cleaned.toLowerCase() === 'amber' || cleaned.toLowerCase() === 'amer') {
-        cleaned = 'Amer, Jaipur';
+    // Reconcile Amer / Amber and sub-localities/tehsils of Jaipur to the unified district "Jaipur, Rajasthan"
+    if (/\b(Amber|Amer|Sanganer|Jhotwara|Sodala|Mansarovar|Malviya Nagar|Vaishali Nagar|Vidyadhar Nagar|Jagatpura|Durgapura|Sitapura)\b/i.test(cleaned)) {
+        if (/\bRajasthan\b/i.test(cleaned)) {
+            cleaned = 'Jaipur, Rajasthan';
+        } else {
+            cleaned = cleaned.replace(/\b(Amber|Amer|Sanganer|Jhotwara|Sodala|Mansarovar|Malviya Nagar|Vaishali Nagar|Vidyadhar Nagar|Jagatpura|Durgapura|Sitapura)\b/gi, 'Jaipur');
+        }
     }
+
+    // Clean up any formatting artifacts and duplicated city/state names
+    cleaned = cleaned
+        .replace(/Jaipur(?:\s*,\s*|\s+)Jaipur/gi, 'Jaipur')
+        .replace(/Rajasthan(?:\s*,\s*|\s+)Rajasthan/gi, 'Rajasthan')
+        .replace(/,\s*,+/g, ',')
+        .replace(/\s*,\s*/g, ', ')
+        .replace(/^,\s*|\s*,\s*$/g, '')
+        .trim();
+
     return cleaned;
 }
 window.cleanLocationName = cleanLocationName;
@@ -1043,7 +1055,8 @@ function renderLocationUI(loc, isLive = true) {
         return;
     }
 
-    const formattedLoc = loc.formatted || (loc.state ? `${loc.city}, ${loc.state}` : loc.city);
+    const rawFormatted = loc.formatted || (loc.state ? `${loc.city}, ${loc.state}` : loc.city);
+    const formattedLoc = cleanLocationName(rawFormatted) || rawFormatted;
     const coordsStr = (typeof loc.lat === 'number' && typeof loc.lon === 'number')
         ? `${loc.lat.toFixed(2)}°N, ${loc.lon.toFixed(2)}°E`
         : '';
