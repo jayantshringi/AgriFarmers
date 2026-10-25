@@ -268,6 +268,14 @@ export function initAuthListener() {
     if (savedUser.mobile && /^\d{10}$/.test(savedUser.mobile)) {
         apiGetUser(savedUser.mobile).then(freshUser => {
             if (freshUser) {
+                if (window.cleanLocationName) {
+                    if (freshUser.district) freshUser.district = window.cleanLocationName(freshUser.district);
+                    if (freshUser.locationName) freshUser.locationName = window.cleanLocationName(freshUser.locationName);
+                    if (freshUser.location) {
+                        if (freshUser.location.formatted) freshUser.location.formatted = window.cleanLocationName(freshUser.location.formatted);
+                        if (freshUser.location.city) freshUser.location.city = window.cleanLocationName(freshUser.location.city);
+                    }
+                }
                 window.currentUser = freshUser;
                 setCurrentSession(freshUser);
                 if (freshUser.location && freshUser.location.lat && freshUser.location.lon) {

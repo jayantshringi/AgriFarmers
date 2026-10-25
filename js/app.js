@@ -165,30 +165,37 @@ function initPWA() {
     updatePWAStatus();
     setInterval(updatePWAStatus, 5000);
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js')
+        navigator.serviceWorker.register('./service-worker.js?v=7.2')
             .then(registration => {
-                console.log('✅ Service Worker registered:', registration.scope);
+                console.log('✅ Service Worker v7.2 registered:', registration.scope);
+                // Immediately check server for new worker
+                registration.update().catch(() => {});
+                
                 registration.addEventListener('updatefound', () => {
                     const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            const alertDiv = document.createElement('div');
-                            alertDiv.className = 'update-alert';
-                            alertDiv.innerHTML = `
-                                <div class="flex justify-between items-center">
-                                    <div class="flex-1">
-                                        <p class="font-bold text-gray-800">Update Available!</p>
-                                        <p class="text-sm text-gray-600">A new version is ready. Click update to refresh.</p>
-                                    </div>
-                                    <button onclick="window.location.reload()" class="ml-4 bg-green-600 text-white px-3 py-1 rounded text-sm">Update</button>
-                                </div>`;
-                            document.body.appendChild(alertDiv);
-                            setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 10000);
-                        }
-                    });
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                newWorker.postMessage({ action: 'skipWaiting' });
+                                console.log('🔄 New Service Worker installed & activated');
+                            }
+                        });
+                    }
                 });
             })
             .catch(err => console.error('❌ Service Worker registration failed:', err));
+
+        // Purge obsolete caches on window side to clear old v6.8 assets
+        if ('caches' in window) {
+            caches.keys().then(keys => {
+                keys.forEach(k => {
+                    if (k !== 'agrifarmers-static-v7.2' && k !== 'agrifarmers-v7.2') {
+                        console.log('🧹 Purging obsolete window cache:', k);
+                        caches.delete(k);
+                    }
+                });
+            }).catch(() => {});
+        }
     }
 }
 
@@ -203,6 +210,72 @@ document.addEventListener('DOMContentLoaded', initPWA);
 
 // ── Main Application Script ────────────────────────────────────────────────────
 console.log('🚜 AgriFarmers App Initializing...');
+
+// Clean and humanize administrative names (e.g. "Jaipur Municipal Corporation" -> "Jaipur")
+function cleanLocationName(rawName) {
+    if (!rawName) return '';
+    let cleaned = rawName
+        .replace(/\bRajsthan\b/gi, 'Rajasthan')
+        .replace(/\s*Municipal Corporation\b/gi, '')
+        .replace(/\s*Nagar Nigam\b/gi, '')
+        .replace(/\s*Mahanagar Palika\b/gi, '')
+        .replace(/\s*Municipal Council\b/gi, '')
+        .replace(/\s*Municipality\b/gi, '')
+        .replace(/\s*Cantonment Board\b/gi, '')
+        .replace(/\s*Tehsil\b/gi, '')
+        .replace(/\s*Resgil\b/gi, '')
+        .replace(/\s*Sub-district\b/gi, '')
+        .replace(/\s*Subdistrict\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .replace(/,\s*,+/g, ',')
+        .replace(/\s*,\s*/g, ', ')
+        .replace(/^,\s*|\s*,\s*$/g, '')
+        .trim();
+
+    // Normalize Amber / Amer in Rajasthan
+    if (/\b(Amber|Amer)\b/i.test(cleaned) && /\bRajasthan\b/i.test(cleaned) && !/\bJaipur\b/i.test(cleaned)) {
+        cleaned = cleaned.replace(/\b(Amber|Amer)(?:\s*,\s*|\s+)Rajasthan\b/i, 'Amer, Jaipur, Rajasthan');
+    } else if (cleaned.toLowerCase() === 'amber' || cleaned.toLowerCase() === 'amer') {
+        cleaned = 'Amer, Jaipur';
+    }
+    return cleaned;
+}
+window.cleanLocationName = cleanLocationName;
+
+// Automatically purge and sanitize obsolete administrative strings stored in localStorage
+function sanitizeStoredUserData() {
+    try {
+        const raw = localStorage.getItem('agrifarmers_user');
+        if (raw) {
+            const u = JSON.parse(raw);
+            let changed = false;
+            if (u.locationName) {
+                const cleaned = cleanLocationName(u.locationName);
+                if (cleaned !== u.locationName) { u.locationName = cleaned; changed = true; }
+            }
+            if (u.district) {
+                const cleaned = cleanLocationName(u.district);
+                if (cleaned !== u.district) { u.district = cleaned; changed = true; }
+            }
+            if (u.location) {
+                if (u.location.formatted) {
+                    const cleaned = cleanLocationName(u.location.formatted);
+                    if (cleaned !== u.location.formatted) { u.location.formatted = cleaned; changed = true; }
+                }
+                if (u.location.city) {
+                    const cleaned = cleanLocationName(u.location.city);
+                    if (cleaned !== u.location.city) { u.location.city = cleaned; changed = true; }
+                }
+            }
+            if (changed) {
+                console.log('🧹 Cleaned obsolete administrative location labels from stored profile');
+                localStorage.setItem('agrifarmers_user', JSON.stringify(u));
+            }
+        }
+    } catch (_) {}
+}
+// Execute immediately on script parse
+sanitizeStoredUserData();
 
 // Global Variables
 let currentUser = null;
@@ -888,20 +961,6 @@ async function fetchIpGeolocation() {
     return null;
 }
 
-// Clean and humanize administrative names (e.g. "Jaipur Municipal Corporation" -> "Jaipur")
-function cleanLocationName(rawName) {
-    if (!rawName) return '';
-    return rawName
-        .replace(/\s*Municipal Corporation\s*/gi, '')
-        .replace(/\s*Nagar Nigam\s*/gi, '')
-        .replace(/\s*Mahanagar Palika\s*/gi, '')
-        .replace(/\s*Municipal Council\s*/gi, '')
-        .replace(/\s*Municipality\s*/gi, '')
-        .replace(/\s*Cantonment Board\s*/gi, '')
-        .replace(/\s*Tehsil\s*/gi, '')
-        .trim();
-}
-
 // Multi-tier high-accuracy reverse geocoding
 async function reverseGeocodeCoords(lat, lon) {
     const apiKey = '5a4b2d457ecbef9eb2a71e480b947604';
@@ -917,10 +976,11 @@ async function reverseGeocodeCoords(lat, lon) {
                 const city = cleanLocationName(rawCity) || rawCity;
                 const state = item.state || '';
                 if (city || state) {
+                    const formatted = cleanLocationName(state ? `${city}, ${state}` : city);
                     return {
                         city: city || 'Your Location',
                         state: state || '',
-                        formatted: state ? `${city}, ${state}` : city,
+                        formatted: formatted || `${city}, ${state}`,
                         source: 'OpenWeather'
                     };
                 }
@@ -937,10 +997,11 @@ async function reverseGeocodeCoords(lat, lon) {
             const city = cleanLocationName(rawLocality) || rawLocality;
             const state = geo.principalSubdivision || '';
             if (city || state) {
+                const formatted = cleanLocationName(state ? `${city}, ${state}` : city);
                 return {
                     city: city || 'Your Location',
                     state: state || '',
-                    formatted: state ? `${city}, ${state}` : city,
+                    formatted: formatted || `${city}, ${state}`,
                     source: 'BigDataCloud'
                 };
             }
@@ -958,10 +1019,11 @@ async function reverseGeocodeCoords(lat, lon) {
             const rawCity = addr.city || addr.town || addr.village || addr.suburb || addr.district || addr.county || addr.state_district || 'Your Location';
             const city = cleanLocationName(rawCity) || rawCity;
             const state = addr.state || '';
+            const formatted = cleanLocationName(state ? `${city}, ${state}` : city);
             return {
                 city,
                 state,
-                formatted: state ? `${city}, ${state}` : city,
+                formatted: formatted || `${city}, ${state}`,
                 source: 'OSM'
             };
         }
@@ -1017,9 +1079,9 @@ function updateUserInfo() {
         if (window.userLocation && window.userLocation.formatted) {
             renderLocationUI(window.userLocation, window.userLocation.source !== 'fallback');
         } else if (currentUser.locationName) {
-            farmerLocation.innerHTML = `<span class="font-bold">${currentUser.locationName}</span>`;
+            farmerLocation.innerHTML = `<span class="font-bold">${cleanLocationName(currentUser.locationName)}</span>`;
         } else if (currentUser.district && currentUser.state) {
-            farmerLocation.innerHTML = `<span class="font-bold">${currentUser.district}, ${currentUser.state}</span>`;
+            farmerLocation.innerHTML = `<span class="font-bold">${cleanLocationName(currentUser.district)}, ${currentUser.state}</span>`;
         }
     }
 }
@@ -1253,15 +1315,15 @@ async function getUserLocation(forceRefresh = false) {
                 lon = currentUser.location.lon;
                 accuracy = currentUser.location.accuracy || 20;
                 source = 'verified_farm';
-                city = currentUser.district || currentUser.location.city || 'Your Farm';
+                city = cleanLocationName(currentUser.district || currentUser.location.city || 'Your Farm');
                 state = currentUser.state || currentUser.location.state || '';
-                formatted = currentUser.locationName || currentUser.location.formatted || ((city && state) ? `${city}, ${state}` : city);
+                formatted = cleanLocationName(currentUser.locationName || currentUser.location.formatted || ((city && state) ? `${city}, ${state}` : city));
             } else {
                 // High precision reverse geocode to get real-time city & district
                 const geo = await reverseGeocodeCoords(lat, lon);
-                city = geo?.city || rawPos.city || currentUser?.district || 'Your Location';
+                city = cleanLocationName(geo?.city || rawPos.city || currentUser?.district || 'Your Location');
                 state = geo?.state || rawPos.state || currentUser?.state || '';
-                formatted = geo?.formatted || rawPos.formatted || ((city && state) ? `${city}, ${state}` : city);
+                formatted = cleanLocationName(geo?.formatted || rawPos.formatted || ((city && state) ? `${city}, ${state}` : city));
             }
         } else {
             // Regional default fallback or user registered location
@@ -1270,9 +1332,9 @@ async function getUserLocation(forceRefresh = false) {
                 lon = currentUser.location.lon;
                 accuracy = 50;
                 source = 'verified_farm';
-                city = currentUser.district || currentUser.location.city || 'Your Farm';
+                city = cleanLocationName(currentUser.district || currentUser.location.city || 'Your Farm');
                 state = currentUser.state || currentUser.location.state || '';
-                formatted = currentUser.locationName || currentUser.location.formatted || `${city}, ${state}`;
+                formatted = cleanLocationName(currentUser.locationName || currentUser.location.formatted || `${city}, ${state}`);
             } else {
                 source = 'fallback';
                 const fallbackCity = currentUser?.district || 'Jaipur';
@@ -1313,23 +1375,23 @@ async function getUserLocation(forceRefresh = false) {
         if (currentUser) {
             // Only update district/state if this was genuine GPS or manual verified location (NOT rough laptop IP override)
             if (source !== 'ip') {
-                currentUser.district = city;
+                currentUser.district = cleanLocationName(city);
                 if (state) currentUser.state = state;
-                currentUser.locationName = formatted;
-                currentUser.location = { lat, lon, accuracy, source, city, state, formatted };
+                currentUser.locationName = cleanLocationName(formatted);
+                currentUser.location = { lat, lon, accuracy, source, city: cleanLocationName(city), state, formatted: cleanLocationName(formatted) };
                 localStorage.setItem('agrifarmers_user', JSON.stringify(currentUser));
 
                 // If mobile detected accurate GPS, automatically sync to cloud profile so laptop sees it!
                 if (source === 'gps' && currentUser.mobile && window._updateUserLocation) {
                     window._updateUserLocation(currentUser.mobile, {
                         location: currentUser.location,
-                        district: city,
+                        district: cleanLocationName(city),
                         state: state
                     }).catch(err => console.warn('Cloud location sync error:', err.message));
                 }
             } else {
                 // For laptop IP, store in session but preserve registered farm profile
-                currentUser.location = currentUser.location || { lat, lon, accuracy, source, city, state, formatted };
+                currentUser.location = currentUser.location || { lat, lon, accuracy, source, city: cleanLocationName(city), state, formatted: cleanLocationName(formatted) };
             }
         }
 

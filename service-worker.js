@@ -1,6 +1,6 @@
-// AgriFarmers Service Worker v6.8
-const CACHE_NAME = 'agrifarmers-v6.8';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v6.8';
+// AgriFarmers Production Service Worker v7.2
+const CACHE_NAME = 'agrifarmers-v7.2';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v7.2';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -28,113 +28,94 @@ const STATIC_ASSETS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
-// Install event
+// Install event - Pre-cache essential static assets and immediately activate
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v6.8...');
-  
+  console.log('[Service Worker] Installing v7.2...');
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(STATIC_CACHE_NAME)
-      .then((cache) => {
-        console.log('[Service Worker] Caching static assets');
-        return cache.addAll(STATIC_ASSETS);
-      })
-      .then(() => {
-        console.log('[Service Worker] Installation complete');
-        return self.skipWaiting();
-      })
+    caches.open(STATIC_CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS).catch(err => {
+        console.warn('[Service Worker] Pre-cache warning:', err);
+      });
+    })
   );
 });
 
-// Activate event
+// Activate event - Wipe out ALL outdated caches so new code runs instantly
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v6.8...');
-  
+  console.log('[Service Worker] Activating v7.2 & purging stale caches...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== STATIC_CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', cacheName);
+          if (cacheName !== STATIC_CACHE_NAME && cacheName !== CACHE_NAME) {
+            console.log('[Service Worker] Deleting obsolete cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      console.log('[Service Worker] Activation complete');
+      console.log('[Service Worker] Claiming all clients...');
       return self.clients.claim();
     })
   );
 });
 
-// Fetch event - Network-First for Navigation, Cache-First for static assets
+// Fetch event - Network-First for HTML & Scripts, Cache-Fallback when offline
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Always bypass API requests to ensure fresh dynamic backend responses
+  // Always bypass dynamic API requests
   if (event.request.url.includes('/api/')) {
     return;
   }
 
-  // HTML navigation requests: Network-First with Cache fallback for instant updates
-  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            const copy = response.clone();
-            caches.open(STATIC_CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request).then((res) => res || caches.match('./index.html')))
-    );
+  // Bypass third-party geocoding / weather / reverse-geocode APIs from Service Worker interception
+  if (
+    event.request.url.includes('openweathermap.org') ||
+    event.request.url.includes('bigdatacloud.net') ||
+    event.request.url.includes('ipwho.is') ||
+    event.request.url.includes('nominatim.openstreetmap.org')
+  ) {
     return;
   }
 
+  // NETWORK-FIRST STRATEGY:
+  // Always fetch fresh JS, CSS, and HTML from network.
+  // When online, cache is updated in the background.
+  // When offline, fallback to cached assets.
   event.respondWith(
-    caches.match(event.request)
-      .then((cachedResponse) => {
-        if (cachedResponse) {
-          // Return cached response
-          return cachedResponse;
-        }
-
-        // Not in cache, fetch from network
-        return fetch(event.request)
-          .then((response) => {
-            // Don't cache if not a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clone the response for cache
-            const responseToCache = response.clone();
-            
-            caches.open(STATIC_CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(() => {
-            // Return offline page for HTML requests
-            if (event.request.headers.get('accept').includes('text/html')) {
-              return caches.match('./index.html');
-            }
-            // Return offline message for other requests
-            return new Response('You are offline. Please check your connection.');
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(STATIC_CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
           });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Network failed (offline) - Serve from cache
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('./index.html');
+          }
+          return new Response('Offline: Resource not available', { status: 503 });
+        });
       })
   );
 });
 
-// Message event for updating cache
+// Instant message handler
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (event.data && (event.data.action === 'skipWaiting' || event.data === 'skipWaiting')) {
     self.skipWaiting();
   }
 });
