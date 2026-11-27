@@ -8,6 +8,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { createOtpHandler } = require('./routes/otp');
 const { createUsersHandler } = require('./routes/users');
 const { handleAgrovisionRequest } = require('./routes/agrovision');
+const { handleWeatherRequest } = require('./routes/weather');
 
 loadDotEnv(path.join(__dirname, '.env'));
 
@@ -352,6 +353,13 @@ async function handleApiRequest(req, res) {
         // AgroVision Precision Agriculture Router
         if (requestUrl.pathname.startsWith('/api/agrovision')) {
             if (await handleAgrovisionRequest(req, res, requestUrl, httpHelpers)) {
+                return;
+            }
+        }
+
+        // OpenWeatherMap Secure Proxy Router
+        if (requestUrl.pathname.startsWith('/api/weather')) {
+            if (await handleWeatherRequest(req, res, requestUrl, httpHelpers)) {
                 return;
             }
         }

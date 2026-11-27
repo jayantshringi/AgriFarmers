@@ -1,6 +1,6 @@
-// AgriFarmers Production Service Worker v7.4
-const CACHE_NAME = 'agrifarmers-v7.4';
-const STATIC_CACHE_NAME = 'agrifarmers-static-v7.4';
+// AgriFarmers Production Service Worker v7.5
+const CACHE_NAME = 'agrifarmers-v7.5';
+const STATIC_CACHE_NAME = 'agrifarmers-static-v7.5';
 
 // URLs for caching
 const STATIC_ASSETS = [
@@ -30,7 +30,7 @@ const STATIC_ASSETS = [
 
 // Install event - Pre-cache essential static assets and immediately activate
 self.addEventListener('install', (event) => {
-  console.log('[Service Worker] Installing v7.4...');
+  console.log('[Service Worker] Installing v7.5...');
   self.skipWaiting();
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME).then((cache) => {
@@ -43,7 +43,7 @@ self.addEventListener('install', (event) => {
 
 // Activate event - Wipe out ALL outdated caches so new code runs instantly
 self.addEventListener('activate', (event) => {
-  console.log('[Service Worker] Activating v7.4 & purging stale caches...');
+  console.log('[Service Worker] Activating v7.5 & purging stale caches...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -76,6 +76,7 @@ self.addEventListener('fetch', (event) => {
   // Bypass third-party geocoding / weather / reverse-geocode APIs from Service Worker interception
   if (
     event.request.url.includes('openweathermap.org') ||
+    event.request.url.includes('open-meteo.com') ||
     event.request.url.includes('bigdatacloud.net') ||
     event.request.url.includes('ipwho.is') ||
     event.request.url.includes('nominatim.openstreetmap.org')

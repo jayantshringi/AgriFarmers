@@ -155,6 +155,13 @@ function getOpenWeatherApiKey() {
     return window.AGRIFARMERS_CONFIG?.openWeatherApiKey || window.AGRIFARMERS_OPENWEATHER_KEY || '';
 }
 
+function getBackendWeatherBaseUrl() {
+    if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') {
+        return null;
+    }
+    return window.AGRIFARMERS_CONFIG?.otpApiBaseUrl || '';
+}
+
 // Show toast notification (single definition — used by both PWA and app sections)
 function showToast(message, type = 'success') {
     document.querySelectorAll('.custom-toast').forEach(t => t.remove());
@@ -180,9 +187,9 @@ function initPWA() {
     updatePWAStatus();
     setInterval(updatePWAStatus, 5000);
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js?v=7.4')
+        navigator.serviceWorker.register('./service-worker.js?v=7.5')
             .then(registration => {
-                console.log('✅ Service Worker v7.4 registered:', registration.scope);
+                console.log('✅ Service Worker v7.5 registered:', registration.scope);
                 // Immediately check server for new worker
                 registration.update().catch(() => {});
                 
@@ -204,7 +211,7 @@ function initPWA() {
         if ('caches' in window) {
             caches.keys().then(keys => {
                 keys.forEach(k => {
-                    if (k !== 'agrifarmers-static-v7.3' && k !== 'agrifarmers-v7.3') {
+                    if (k !== 'agrifarmers-static-v7.5' && k !== 'agrifarmers-v7.5') {
                         console.log('🧹 Purging obsolete window cache:', k);
                         caches.delete(k);
                     }
@@ -991,29 +998,37 @@ async function fetchIpGeolocation() {
 // Multi-tier high-accuracy reverse geocoding
 async function reverseGeocodeCoords(lat, lon) {
     const apiKey = getOpenWeatherApiKey();
-    
-    // Tier 1: OpenWeather Geocoding API (Fast & highly accurate for India)
-    try {
-        const owRes = await fetch(`https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`);
-        if (owRes.ok) {
-            const list = await owRes.json();
-            if (Array.isArray(list) && list.length > 0) {
-                const item = list[0];
-                const rawCity = item.name || '';
-                const city = cleanLocationName(rawCity) || rawCity;
-                const state = item.state || '';
-                if (city || state) {
-                    const formatted = cleanLocationName(state ? `${city}, ${state}` : city);
-                    return {
-                        city: city || 'Your Location',
-                        state: state || '',
-                        formatted: formatted || `${city}, ${state}`,
-                        source: 'OpenWeather'
-                    };
+    const backendBase = getBackendWeatherBaseUrl();
+
+    // Tier 1: OpenWeather Geocoding (via client key if set, or secure backend /api/weather/reverse proxy)
+    const owReverseUrl = apiKey
+        ? `https://api.openweathermap.org/geo/1.0/reverse?lat=${lat}&lon=${lon}&limit=1&appid=${apiKey}`
+        : (backendBase !== null ? `${backendBase}/api/weather/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}` : null);
+
+    if (owReverseUrl) {
+        try {
+            const owRes = await fetch(owReverseUrl);
+            if (owRes.ok) {
+                const payload = await owRes.json();
+                const list = Array.isArray(payload) ? payload : payload?.results;
+                if (Array.isArray(list) && list.length > 0) {
+                    const item = list[0];
+                    const rawCity = item.name || '';
+                    const city = cleanLocationName(rawCity) || rawCity;
+                    const state = item.state || '';
+                    if (city || state) {
+                        const formatted = cleanLocationName(state ? `${city}, ${state}` : city);
+                        return {
+                            city: city || 'Your Location',
+                            state: state || '',
+                            formatted: formatted || `${city}, ${state}`,
+                            source: 'OpenWeather'
+                        };
+                    }
                 }
             }
-        }
-    } catch (_) {}
+        } catch (_) {}
+    }
 
     // Tier 2: BigDataCloud Reverse Geocoding Client
     try {
@@ -1315,11 +1330,15 @@ async function autoDetectSignupLocation() {
 async function getUserLocation(forceRefresh = false) {
     const farmerLocation = document.getElementById('farmerLocation');
     const updateIcon = document.getElementById('updateGpsIcon');
+    const modalRefreshBtn = document.getElementById('weatherModalRefreshBtn');
+    const modalRefreshIcon = document.getElementById('weatherModalRefreshIcon');
 
     if (farmerLocation) {
         farmerLocation.innerHTML = `<i class="fas fa-spinner fa-spin text-xs mr-1 text-yellow-300"></i>Detecting live location...`;
     }
     if (updateIcon) updateIcon.classList.add('fa-spin');
+    if (modalRefreshIcon) modalRefreshIcon.classList.add('fa-spin');
+    if (modalRefreshBtn) modalRefreshBtn.disabled = true;
 
     try {
         const rawPos = await acquireLivePosition(forceRefresh);
@@ -1333,19 +1352,22 @@ async function getUserLocation(forceRefresh = false) {
             accuracy = rawPos.accuracy || 100;
             source = rawPos.source || 'gps';
 
+            const savedLoc = currentUser?.location || window.userLocation;
+            const hasSavedCoords = Boolean(savedLoc && typeof savedLoc.lat === 'number' && typeof savedLoc.lon === 'number');
+            const hasPinnedFarm = hasSavedCoords && (savedLoc.source === 'manual_verified' || savedLoc.source === 'verified_farm');
+
             // Cross-device Cloud Farm Sync:
-            // If running on a laptop or desktop where only IP geolocation is available,
-            // check if user has a verified farm location saved in their cloud profile (from mobile GPS or signup).
-            // Prioritize the user's verified farm coordinates so laptop displays the exact same farm as mobile!
-            if (source === 'ip' && currentUser?.location && currentUser.location.lat && currentUser.location.lon && !forceRefresh) {
-                console.log('🌾 Using verified farm location from cloud profile (matches mobile GPS)');
-                lat = currentUser.location.lat;
-                lon = currentUser.location.lon;
-                accuracy = currentUser.location.accuracy || 20;
-                source = 'verified_farm';
-                city = cleanLocationName(currentUser.district || currentUser.location.city || 'Your Farm');
-                state = currentUser.state || currentUser.location.state || '';
-                formatted = cleanLocationName(currentUser.locationName || currentUser.location.formatted || ((city && state) ? `${city}, ${state}` : city));
+            // If only IP geolocation is available (GPS unavailable/denied), preserve verified/pinned farm coordinates
+            // so coarse ISP routing does not overwrite the farmer's real farm location.
+            if (source === 'ip' && hasSavedCoords && (!forceRefresh || hasPinnedFarm)) {
+                console.log('🌾 Using verified farm location from cloud profile');
+                lat = savedLoc.lat;
+                lon = savedLoc.lon;
+                accuracy = savedLoc.accuracy || 20;
+                source = savedLoc.source === 'manual_verified' ? 'manual_verified' : 'verified_farm';
+                city = cleanLocationName(currentUser?.district || savedLoc.city || 'Your Farm');
+                state = currentUser?.state || savedLoc.state || '';
+                formatted = cleanLocationName(currentUser?.locationName || savedLoc.formatted || ((city && state) ? `${city}, ${state}` : city));
             } else {
                 // High precision reverse geocode to get real-time city & district
                 const geo = await reverseGeocodeCoords(lat, lon);
@@ -1359,7 +1381,7 @@ async function getUserLocation(forceRefresh = false) {
                 lat = currentUser.location.lat;
                 lon = currentUser.location.lon;
                 accuracy = 50;
-                source = 'verified_farm';
+                source = currentUser.location.source === 'manual_verified' ? 'manual_verified' : 'verified_farm';
                 city = cleanLocationName(currentUser.district || currentUser.location.city || 'Your Farm');
                 state = currentUser.state || currentUser.location.state || '';
                 formatted = cleanLocationName(currentUser.locationName || currentUser.location.formatted || `${city}, ${state}`);
@@ -1426,9 +1448,9 @@ async function getUserLocation(forceRefresh = false) {
         // Notify user if force refreshed
         if (forceRefresh) {
             if (source === 'gps') {
-                showToast(`📍 Live Mobile GPS: ${formatted} (±${Math.round(accuracy)}m) • Synced to Cloud!`, 'success');
+                showToast(`📍 Live GPS: ${formatted} (±${Math.round(accuracy)}m)`, 'success');
             } else if (source === 'verified_farm' || source === 'manual_verified') {
-                showToast(`🌾 Using Verified Farm: ${formatted} (Synced with Account)`, 'success');
+                showToast(`🌾 Device GPS unavailable — using Verified Farm: ${formatted}`, 'info');
             } else if (source === 'ip') {
                 showToast(`📍 Network Location: ${formatted}. Set your exact farm location to sync across devices.`, 'info');
             } else {
@@ -1440,7 +1462,7 @@ async function getUserLocation(forceRefresh = false) {
         window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: userLocation }));
 
         // Load weather with live coordinates and accurate location display
-        loadWeatherData(lat, lon, formatted);
+        await loadWeatherData(lat, lon, formatted);
 
         // Start background watchPosition for ongoing movement tracking
         startLiveLocationTracking();
@@ -1452,6 +1474,10 @@ async function getUserLocation(forceRefresh = false) {
         }
     } finally {
         if (updateIcon) updateIcon.classList.remove('fa-spin');
+        const activeModalRefreshIcon = document.getElementById('weatherModalRefreshIcon');
+        const activeModalRefreshBtn = document.getElementById('weatherModalRefreshBtn');
+        if (activeModalRefreshIcon) activeModalRefreshIcon.classList.remove('fa-spin');
+        if (activeModalRefreshBtn) activeModalRefreshBtn.disabled = false;
     }
 
     loadMarketData();
@@ -1481,6 +1507,89 @@ function openSetLocationModal() {
     modal.classList.add('active');
 }
 
+// Shared multi-provider geocoding for city/village/mandi queries (India-prioritized)
+async function geocodeLocationQuery(query) {
+    const trimmed = (query || '').trim();
+    if (!trimmed) return null;
+
+    const apiKey = getOpenWeatherApiKey();
+    const backendBase = getBackendWeatherBaseUrl();
+
+    // Tier 1: OpenWeather Direct Geocoding (via client key if set, or secure backend /api/weather/geocode proxy)
+    const owGeoUrl = apiKey
+        ? `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmed)},IN&limit=1&appid=${apiKey}`
+        : (backendBase !== null ? `${backendBase}/api/weather/geocode?q=${encodeURIComponent(trimmed)}` : null);
+
+    if (owGeoUrl) {
+        try {
+            const owRes = await fetch(owGeoUrl);
+            if (owRes.ok) {
+                const payload = await owRes.json();
+                const list = Array.isArray(payload) ? payload : payload?.results;
+                if (Array.isArray(list) && list.length > 0) {
+                    const item = list[0];
+                    const city = cleanLocationName(item.name) || item.name;
+                    const state = item.state || '';
+                    return {
+                        lat: item.lat,
+                        lon: item.lon,
+                        city,
+                        state,
+                        formatted: cleanLocationName(state ? `${city}, ${state}` : city) || (state ? `${city}, ${state}` : city)
+                    };
+                }
+            }
+        } catch (_) {}
+    }
+
+    // Tier 2: Open-Meteo Geocoding API (Free, no API key required, CORS-enabled)
+    try {
+        const omRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=5&language=en&format=json`);
+        if (omRes.ok) {
+            const data = await omRes.json();
+            const results = Array.isArray(data?.results) ? data.results : [];
+            if (results.length > 0) {
+                const item = results.find(r => r.country_code === 'IN') || results[0];
+                const city = cleanLocationName(item.name) || item.name;
+                const state = item.admin1 || '';
+                return {
+                    lat: item.latitude,
+                    lon: item.longitude,
+                    city,
+                    state,
+                    formatted: cleanLocationName(state ? `${city}, ${state}` : city) || (state ? `${city}, ${state}` : city)
+                };
+            }
+        }
+    } catch (_) {}
+
+    // Tier 3: OpenStreetMap Nominatim Search
+    try {
+        const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(trimmed)}&countrycodes=in&format=json&addressdetails=1&limit=1`, {
+            headers: { 'Accept-Language': 'en' }
+        });
+        if (nomRes.ok) {
+            const list = await nomRes.json();
+            if (Array.isArray(list) && list.length > 0) {
+                const item = list[0];
+                const addr = item.address || {};
+                const rawCity = addr.city || addr.town || addr.village || addr.county || addr.state_district || item.name || trimmed;
+                const city = cleanLocationName(rawCity) || rawCity;
+                const state = addr.state || '';
+                return {
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon),
+                    city,
+                    state,
+                    formatted: cleanLocationName(state ? `${city}, ${state}` : city) || (state ? `${city}, ${state}` : city)
+                };
+            }
+        }
+    } catch (_) {}
+
+    return null;
+}
+
 // Search any city, district, village or mandi and lock it as farm location
 async function searchAndSetFarmLocation() {
     const input = document.getElementById('farmLocationSearchInput');
@@ -1495,28 +1604,16 @@ async function searchAndSetFarmLocation() {
     if (btn) { btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; }
 
     try {
-        const apiKey = getOpenWeatherApiKey();
-        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)},IN&limit=1&appid=${apiKey}`);
-
-        let found = false;
-        let item = null;
-        if (geoRes.ok) {
-            const list = await geoRes.json();
-            if (Array.isArray(list) && list.length > 0) {
-                item = list[0];
-                found = true;
-            }
-        }
-
-        if (!found) {
+        const item = await geocodeLocationQuery(query);
+        if (!item || !Number.isFinite(item.lat) || !Number.isFinite(item.lon)) {
             showToast('Location not found. Please try entering a district or major town nearby.', 'error');
             if (btn) { btn.disabled = false; btn.innerHTML = `<i class="fas fa-check"></i><span>Set</span>`; }
             return;
         }
 
-        const city = item.name;
+        const city = item.city;
         const state = item.state || '';
-        const formatted = state ? `${city}, ${state}` : city;
+        const formatted = item.formatted || (state ? `${city}, ${state}` : city);
         const newLocation = {
             lat: item.lat,
             lon: item.lon,
@@ -1550,7 +1647,7 @@ async function searchAndSetFarmLocation() {
 
         renderLocationUI(newLocation, true);
         window.dispatchEvent(new CustomEvent('agrifarmers:location-updated', { detail: newLocation }));
-        loadWeatherData(newLocation.lat, newLocation.lon, formatted);
+        await loadWeatherData(newLocation.lat, newLocation.lon, formatted);
 
         closeModal('setFarmLocationModal');
         showToast(`🌾 Farm location set to ${formatted} and synced across all devices!`, 'success');
@@ -1580,82 +1677,292 @@ function loadDashboardData() {
     }
 }
 
-// Load weather data using REAL API
+let weatherRequestSeq = 0;
+
+// Map WMO Weather Interpretation Codes (Open-Meteo) to OpenWeather-compatible condition + description
+function mapWmoWeatherCode(code) {
+    const c = Number(code);
+    if (c === 0) return { main: 'Clear', description: 'clear sky', visibility: 10000 };
+    if (c === 1) return { main: 'Clouds', description: 'few clouds', visibility: 10000 };
+    if (c === 2) return { main: 'Clouds', description: 'scattered clouds', visibility: 10000 };
+    if (c === 3) return { main: 'Clouds', description: 'overcast clouds', visibility: 9000 };
+    if (c === 45 || c === 48) return { main: 'Fog', description: 'fog', visibility: 2000 };
+    if (c >= 51 && c <= 57) return { main: 'Rain', description: 'light rain', visibility: 7000 };
+    if (c === 61) return { main: 'Rain', description: 'light rain', visibility: 7000 };
+    if (c === 63) return { main: 'Rain', description: 'moderate rain', visibility: 6000 };
+    if (c >= 65 && c <= 67) return { main: 'Rain', description: 'heavy intensity rain', visibility: 4500 };
+    if ((c >= 71 && c <= 77) || c === 85 || c === 86) return { main: 'Snow', description: 'snow', visibility: 4000 };
+    if (c >= 80 && c <= 82) return { main: 'Rain', description: 'shower rain', visibility: 5500 };
+    if (c >= 95 && c <= 99) return { main: 'Thunderstorm', description: 'thunderstorm', visibility: 4500 };
+    return { main: 'Clouds', description: 'scattered clouds', visibility: 10000 };
+}
+
+function parseLocalIsoToUnix(isoStr, fallbackUnix) {
+    if (!isoStr || typeof isoStr !== 'string') return fallbackUnix;
+    const ms = Date.parse(isoStr);
+    return Number.isFinite(ms) ? Math.floor(ms / 1000) : fallbackUnix;
+}
+
+function getWeatherCacheKey(lat, lon) {
+    return `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)}`;
+}
+
+function getCachedWeather(lat, lon) {
+    try {
+        const raw = localStorage.getItem('agrifarmers_weather_cache');
+        if (!raw) return null;
+        const store = JSON.parse(raw);
+        const entry = store?.[getWeatherCacheKey(lat, lon)];
+        if (!entry || !entry.weatherData) return null;
+        // Reuse cached live weather for up to 12 hours when offline
+        if (Date.now() - (entry.savedAt || 0) > 12 * 60 * 60 * 1000) return null;
+        return entry;
+    } catch (_) {
+        return null;
+    }
+}
+
+function saveCachedWeather(lat, lon, weatherData, forecastData) {
+    try {
+        const raw = localStorage.getItem('agrifarmers_weather_cache');
+        const store = raw ? JSON.parse(raw) : {};
+        store[getWeatherCacheKey(lat, lon)] = {
+            savedAt: Date.now(),
+            weatherData,
+            forecastData
+        };
+        const keys = Object.keys(store);
+        if (keys.length > 10) {
+            keys.sort((a, b) => (store[a].savedAt || 0) - (store[b].savedAt || 0));
+            for (let i = 0; i < keys.length - 10; i++) {
+                delete store[keys[i]];
+            }
+        }
+        localStorage.setItem('agrifarmers_weather_cache', JSON.stringify(store));
+    } catch (_) {}
+}
+
+// Fetch live current weather + 5-day forecast from Open-Meteo (free, no API key required)
+async function fetchOpenMeteoWeather(lat, lon) {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max&timezone=auto&forecast_days=6`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Open-Meteo HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data || !data.current) {
+        throw new Error('Open-Meteo returned incomplete weather payload');
+    }
+
+    const cur = data.current;
+    const daily = data.daily || {};
+    const mappedCur = mapWmoWeatherCode(cur.weather_code);
+    const temp = Number(cur.temperature_2m);
+    const feelsLike = Number.isFinite(Number(cur.apparent_temperature)) ? Number(cur.apparent_temperature) : temp;
+    const tempMin = Array.isArray(daily.temperature_2m_min) && Number.isFinite(Number(daily.temperature_2m_min[0]))
+        ? Number(daily.temperature_2m_min[0])
+        : temp - 2;
+    const tempMax = Array.isArray(daily.temperature_2m_max) && Number.isFinite(Number(daily.temperature_2m_max[0]))
+        ? Number(daily.temperature_2m_max[0])
+        : temp + 2;
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const sunriseSec = parseLocalIsoToUnix(daily.sunrise?.[0], nowSec - 21600);
+    const sunsetSec = parseLocalIsoToUnix(daily.sunset?.[0], nowSec + 21600);
+
+    const weatherData = {
+        main: {
+            temp,
+            feels_like: feelsLike,
+            humidity: Math.round(Number(cur.relative_humidity_2m ?? 55)),
+            pressure: Math.round(Number(cur.surface_pressure ?? 1013)),
+            temp_min: tempMin,
+            temp_max: tempMax
+        },
+        weather: [{
+            main: mappedCur.main,
+            description: mappedCur.description
+        }],
+        wind: {
+            speed: Math.round(Number(cur.wind_speed_10m ?? 0) * 10) / 10
+        },
+        visibility: mappedCur.visibility,
+        sys: {
+            sunrise: sunriseSec,
+            sunset: sunsetSec
+        },
+        _provider: 'open-meteo'
+    };
+
+    let forecastData = null;
+    if (Array.isArray(daily.time) && daily.time.length > 0) {
+        const list = [];
+        const count = Math.min(5, daily.time.length);
+        for (let i = 0; i < count; i++) {
+            const dateStr = daily.time[i];
+            const dCode = daily.weather_code?.[i] ?? cur.weather_code;
+            const dMapped = mapWmoWeatherCode(dCode);
+            const dMax = Number(daily.temperature_2m_max?.[i] ?? temp);
+            const dMin = Number(daily.temperature_2m_min?.[i] ?? dMax);
+            const dAvg = Math.round(((dMax + dMin) / 2) * 10) / 10;
+            const popPct = Number(daily.precipitation_probability_max?.[i] ?? 0);
+            list.push({
+                dt: parseLocalIsoToUnix(`${dateStr}T12:00:00`, nowSec + i * 86400),
+                dt_txt: `${dateStr} 12:00:00`,
+                main: { temp: dAvg, temp_min: dMin, temp_max: dMax },
+                weather: [{ main: dMapped.main, description: dMapped.description }],
+                pop: Math.max(0, Math.min(1, popPct / 100))
+            });
+        }
+        forecastData = { list };
+    }
+
+    return { weatherData, forecastData };
+}
+
+// Fetch live weather from OpenWeatherMap when API key is configured
+async function fetchOpenWeatherData(lat, lon, apiKey) {
+    const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+    if (!response.ok) {
+        throw new Error(`OpenWeather HTTP ${response.status}`);
+    }
+    const weatherData = await response.json();
+    if (weatherData?.wind && typeof weatherData.wind.speed === 'number') {
+        // OpenWeather metric wind.speed is m/s; UI displays km/h
+        weatherData.wind.speed = Math.round(weatherData.wind.speed * 3.6 * 10) / 10;
+    }
+
+    let forecastData = null;
+    try {
+        const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
+        if (fRes.ok) forecastData = await fRes.json();
+    } catch (_) {}
+
+    weatherData._provider = 'openweathermap';
+    return { weatherData, forecastData };
+}
+
+// Deterministic offline fallback (never randomizes on repeated clicks)
+function buildDeterministicOfflineWeather(lat, lon, locName) {
+    const seedInput = `${Number(lat).toFixed(2)},${Number(lon).toFixed(2)},${new Date().toISOString().slice(0, 10)}`;
+    let hash = 0;
+    for (let i = 0; i < seedInput.length; i++) {
+        hash = ((hash << 5) - hash) + seedInput.charCodeAt(i);
+        hash |= 0;
+    }
+    const norm = Math.abs(hash) % 100;
+    const baseTemp = getDeterministicTemp(lat, lon, norm);
+    const conds = [
+        { main: 'Clear', description: 'clear sky' },
+        { main: 'Clouds', description: 'few clouds' },
+        { main: 'Clouds', description: 'scattered clouds' }
+    ];
+    const cond = conds[norm % conds.length];
+
+    return {
+        main: {
+            temp: baseTemp,
+            feels_like: baseTemp + 1,
+            humidity: 48 + (norm % 25),
+            pressure: 1012 + (norm % 5),
+            temp_min: baseTemp - 4,
+            temp_max: baseTemp + 4
+        },
+        weather: [cond],
+        wind: { speed: Math.round((6 + (norm % 9)) * 10) / 10 },
+        visibility: 10000,
+        sys: {
+            sunrise: Math.floor(Date.now() / 1000) - 21600,
+            sunset: Math.floor(Date.now() / 1000) + 21600
+        },
+        name: locName,
+        _locationName: locName,
+        _lat: lat,
+        _lon: lon,
+        _provider: 'offline-fallback'
+    };
+}
+
+// Load weather data using live weather APIs (OpenWeather direct/proxy -> Open-Meteo -> offline cache)
 async function loadWeatherData(lat, lon, customLocationName = null) {
+    const reqId = ++weatherRequestSeq;
+    const numLat = Number(lat);
+    const numLon = Number(lon);
+    if (!Number.isFinite(numLat) || !Number.isFinite(numLon)) return;
+
     try {
         const apiKey = getOpenWeatherApiKey();
-        
-        // 1. Fetch current weather
-        const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
-        
-        // 2. Fetch 5-day agricultural forecast
-        let forecastData = null;
-        try {
-            const fRes = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`);
-            if (fRes.ok) forecastData = await fRes.json();
-        } catch (_) {}
+        const backendBase = getBackendWeatherBaseUrl();
+        let result = null;
 
-        if (response.ok) {
-            const weatherData = await response.json();
-            
-            // Determine accurate location display name
-            const locName = customLocationName || 
-                window.userLocation?.formatted ||
-                currentUser?.locationName || 
-                weatherData.name ||
-                (currentUser?.district ? (currentUser.state ? `${currentUser.district}, ${currentUser.state}` : currentUser.district) : '') ||
-                'Your Location';
-                
-            weatherData._locationName = locName;
-            weatherData._lat = lat;
-            weatherData._lon = lon;
-            
-            window.latestWeatherData = weatherData;
-            window.latestForecastData = forecastData;
-            window.userWeatherTemp = Math.round(weatherData.main.temp);
-
-            updateWeatherCard(weatherData);
-            updateWeatherModal(weatherData, forecastData);
-            updateFarmingTips(weatherData);
-        } else {
-            throw new Error('Weather API failed');
+        if (apiKey) {
+            try {
+                result = await fetchOpenWeatherData(numLat, numLon, apiKey);
+            } catch (owErr) {
+                console.warn('OpenWeather direct unavailable, trying fallback:', owErr.message);
+            }
+        } else if (backendBase !== null) {
+            try {
+                const proxyRes = await fetch(`${backendBase}/api/weather?lat=${encodeURIComponent(numLat)}&lon=${encodeURIComponent(numLon)}`);
+                if (proxyRes.ok) {
+                    const proxyData = await proxyRes.json();
+                    if (proxyData?.weatherData) {
+                        result = {
+                            weatherData: proxyData.weatherData,
+                            forecastData: proxyData.forecastData || null
+                        };
+                    }
+                }
+            } catch (proxyErr) {
+                console.warn('Backend weather proxy unavailable, falling back to Open-Meteo:', proxyErr.message);
+            }
         }
-    } catch (error) {
-        console.error('Error loading weather data:', error);
-        
-        // Fallback to realistic sample data based on location
-        const locName = customLocationName || window.userLocation?.formatted || currentUser?.locationName || currentUser?.district || 'Your Location';
-        const sampleWeather = {
-            main: {
-                temp: getRandomTemp(lat, lon),
-                feels_like: getRandomTemp(lat, lon) + 2,
-                humidity: Math.floor(Math.random() * 30) + 50,
-                pressure: 1013,
-                temp_min: getRandomTemp(lat, lon) - 2,
-                temp_max: getRandomTemp(lat, lon) + 3
-            },
-            weather: [{ 
-                description: getWeatherDescription(lat, lon),
-                main: getWeatherCondition(lat, lon)
-            }],
-            wind: { speed: (Math.random() * 15 + 5).toFixed(1) },
-            sys: { 
-                sunrise: Math.floor(Date.now() / 1000) - 21600,
-                sunset: Math.floor(Date.now() / 1000) + 21600
-            },
-            name: locName,
-            _locationName: locName,
-            _lat: lat,
-            _lon: lon
-        };
-        
-        window.latestWeatherData = sampleWeather;
-        window.latestForecastData = null;
-        window.userWeatherTemp = Math.round(sampleWeather.main.temp);
 
-        updateWeatherCard(sampleWeather);
-        updateWeatherModal(sampleWeather, null);
-        updateFarmingTips(sampleWeather);
+        if (!result) {
+            result = await fetchOpenMeteoWeather(numLat, numLon);
+        }
+
+        if (reqId !== weatherRequestSeq) return;
+
+        const { weatherData, forecastData } = result;
+        const locName = customLocationName ||
+            window.userLocation?.formatted ||
+            currentUser?.locationName ||
+            weatherData.name ||
+            (currentUser?.district ? (currentUser.state ? `${currentUser.district}, ${currentUser.state}` : currentUser.district) : '') ||
+            'Your Location';
+
+        weatherData._locationName = locName;
+        weatherData._lat = numLat;
+        weatherData._lon = numLon;
+
+        saveCachedWeather(numLat, numLon, weatherData, forecastData);
+
+        window.latestWeatherData = weatherData;
+        window.latestForecastData = forecastData;
+        window.userWeatherTemp = Math.round(weatherData.main.temp);
+
+        updateWeatherCard(weatherData);
+        updateWeatherModal(weatherData, forecastData);
+        updateFarmingTips(weatherData);
+    } catch (error) {
+        if (reqId !== weatherRequestSeq) return;
+        console.error('Error loading weather data:', error);
+
+        const locName = customLocationName || window.userLocation?.formatted || currentUser?.locationName || currentUser?.district || 'Your Location';
+        const cached = getCachedWeather(numLat, numLon);
+        const fallbackWeather = cached?.weatherData
+            ? { ...cached.weatherData, _locationName: locName, _lat: numLat, _lon: numLon }
+            : buildDeterministicOfflineWeather(numLat, numLon, locName);
+        const fallbackForecast = cached?.forecastData || null;
+
+        window.latestWeatherData = fallbackWeather;
+        window.latestForecastData = fallbackForecast;
+        window.userWeatherTemp = Math.round(fallbackWeather.main.temp);
+
+        updateWeatherCard(fallbackWeather);
+        updateWeatherModal(fallbackWeather, fallbackForecast);
+        updateFarmingTips(fallbackWeather);
     }
 }
 
@@ -1669,26 +1976,23 @@ async function searchCustomCityWeather() {
     }
 
     try {
+        const item = await geocodeLocationQuery(city);
+        if (item && Number.isFinite(item.lat) && Number.isFinite(item.lon)) {
+            const locDisplayName = item.formatted || (item.state ? `${item.city}, ${item.state}` : item.city);
+            await loadWeatherData(item.lat, item.lon, locDisplayName);
+            showToast(`📍 Loaded weather for ${locDisplayName}`, 'success');
+            return;
+        }
+
         const apiKey = getOpenWeatherApiKey();
-        const geoRes = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},IN&limit=1&appid=${apiKey}`);
-        if (geoRes.ok) {
-            const list = await geoRes.json();
-            if (list.length > 0) {
-                const item = list[0];
-                const locDisplayName = item.state ? `${item.name}, ${item.state}` : item.name;
-                await loadWeatherData(item.lat, item.lon, locDisplayName);
-                showToast(`📍 Loaded weather for ${locDisplayName}`, 'success');
+        if (apiKey) {
+            const directRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`);
+            if (directRes.ok) {
+                const data = await directRes.json();
+                await loadWeatherData(data.coord.lat, data.coord.lon, data.name);
+                showToast(`📍 Loaded weather for ${data.name}`, 'success');
                 return;
             }
-        }
-        
-        // Fallback search
-        const directRes = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&units=metric&appid=${apiKey}`);
-        if (directRes.ok) {
-            const data = await directRes.json();
-            await loadWeatherData(data.coord.lat, data.coord.lon, data.name);
-            showToast(`📍 Loaded weather for ${data.name}`, 'success');
-            return;
         }
 
         showToast('Could not find location. Please check spelling.', 'error');
@@ -1698,24 +2002,15 @@ async function searchCustomCityWeather() {
     }
 }
 
-// Helper functions for realistic fallback data
-function getRandomTemp(lat, lon) {
-    if (lat > 30) return Math.floor(Math.random() * 10) + 15;
-    if (lat > 20) return Math.floor(Math.random() * 15) + 20;
-    return Math.floor(Math.random() * 10) + 25;
-}
-
-function getWeatherDescription(lat, lon) {
-    const descriptions = [
-        'Clear sky', 'Few clouds', 'Scattered clouds', 'Broken clouds',
-        'Shower rain', 'Rain', 'Thunderstorm', 'Snow', 'Mist'
-    ];
-    return descriptions[Math.floor(Math.random() * descriptions.length)];
-}
-
-function getWeatherCondition(lat, lon) {
-    const conditions = ['Clear', 'Clouds', 'Rain', 'Thunderstorm', 'Mist'];
-    return conditions[Math.floor(Math.random() * conditions.length)];
+// Deterministic seasonal temperature baseline for offline fallback
+function getDeterministicTemp(lat, lon, seedOffset = 0) {
+    const month = new Date().getMonth(); // 0=Jan .. 11=Dec
+    const isWinter = month <= 1 || month >= 10;
+    const isSummer = month >= 3 && month <= 5;
+    const base = lat > 30 ? (isWinter ? 16 : isSummer ? 33 : 25)
+        : lat > 20 ? (isWinter ? 21 : isSummer ? 36 : 28)
+        : (isWinter ? 25 : isSummer ? 33 : 29);
+    return base + (seedOffset % 3) - 1;
 }
 
 // Update farming tips based on weather
@@ -1923,9 +2218,9 @@ function updateWeatherModal(weatherData, forecastData = null) {
                         <span>${escapeHtml(locName)}</span>
                     </h3>
                 </div>
-                <button onclick="getUserLocation(true)"
-                    class="bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-white/25">
-                    <i class="fas fa-sync-alt text-yellow-300"></i>
+                <button id="weatherModalRefreshBtn" onclick="getUserLocation(true)"
+                    class="bg-white/20 hover:bg-white/30 active:scale-95 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 border border-white/25 disabled:opacity-60">
+                    <i id="weatherModalRefreshIcon" class="fas fa-sync-alt text-yellow-300"></i>
                     <span>${refreshGpsLabel}</span>
                 </button>
             </div>
@@ -2236,8 +2531,8 @@ function openWeatherModal() {
     if (window.translateContainer) {
         window.translateContainer(modal, targetLang);
     }
-    if (window.userLocation && window.userLocation.lat && window.userLocation.lon) {
-        loadWeatherData(window.userLocation.lat, window.userLocation.lon);
+    if (window.userLocation && typeof window.userLocation.lat === 'number' && typeof window.userLocation.lon === 'number') {
+        loadWeatherData(window.userLocation.lat, window.userLocation.lon, window.userLocation.formatted);
     } else {
         getUserLocation();
     }
@@ -2444,6 +2739,7 @@ window.reverseGeocodeCoords = reverseGeocodeCoords;
 window.calculateDistanceKm = calculateDistanceKm;
 window.autoDetectSignupLocation = autoDetectSignupLocation;
 window.loadDashboardData = loadDashboardData;
+window.loadWeatherData = loadWeatherData;
 window.searchCustomCityWeather = searchCustomCityWeather;
 window.openSetLocationModal = openSetLocationModal;
 window.searchAndSetFarmLocation = searchAndSetFarmLocation;
